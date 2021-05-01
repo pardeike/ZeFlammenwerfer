@@ -10,6 +10,8 @@ namespace FlameThrower
 		{
 			var harmony = new Harmony("net.pardeike.flamethrower");
 			harmony.PatchAll();
+
+			Renderer.Prepare();
 		}
 
 		public override void DoSettingsWindowContents(Rect inRect)

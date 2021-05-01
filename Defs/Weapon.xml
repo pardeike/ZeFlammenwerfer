@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+
+	<ThingDef ParentName="BaseHumanMakeableGun">
+		<defName>Flamethrower</defName>
+		<label>Flamethrower</label>
+		<description>This is a flamethrower</description>
+		<graphicData>
+			<texPath>Flamethrower</texPath>
+			<graphicClass>Graphic_Single</graphicClass>
+		</graphicData>
+		<generateCommonality>0.4</generateCommonality>
+		<statBases>
+			<WorkToMake>22000</WorkToMake>
+			<Mass>3.4</Mass>
+			<AccuracyTouch>0.8</AccuracyTouch>
+			<AccuracyShort>0.4</AccuracyShort>
+			<AccuracyMedium>0.1</AccuracyMedium>
+			<AccuracyLong>0.01</AccuracyLong>
+			<RangedWeapon_Cooldown>0</RangedWeapon_Cooldown>
+		</statBases>
+		<comps>
+			<li Class="FlameThrower.FlamethrowerCompProperties" />
+		</comps>
+		<costList>
+			<Steel>100</Steel>
+			<ComponentIndustrial>6</ComponentIndustrial>
+		</costList>
+		<verbs>
+			<li>
+				<verbClass>Verb_Shoot</verbClass>
+				<hasStandardCommand>true</hasStandardCommand>
+				<defaultProjectile>Flamethrower_Flame</defaultProjectile>
+				<warmupTime>1.0</warmupTime>
+				<range>10</range>
+				<forcedMissRadius>2</forcedMissRadius>
+				<!--<burstShotCount>1</burstShotCount>-->
+				<ticksBetweenBurstShots>20</ticksBetweenBurstShots>
+				<targetParams>
+					<canTargetLocations>true</canTargetLocations>
+				</targetParams>
+			</li>
+		</verbs>
+		<tools>
+		</tools>
+	</ThingDef>
+
+	<ThingDef ParentName="BaseBullet">
+		<defName>Flamethrower_Flame</defName>
+		<label>FlamethrowerFlame</label>
+		<thingClass>FlameThrower.Flamethrower_Flame</thingClass>
+		<graphicData>
+			<texPath>Debug</texPath>
+			<graphicClass>Graphic_Single</graphicClass>
+		</graphicData>
+		<projectile>
+			<speed>8</speed>
+		</projectile>
+	</ThingDef>
+
+	<DamageDef>
+		<defName>NoDamage</defName>
+		<label>no-damage</label>
+		<externalViolence>false</externalViolence>
+		<deathMessage></deathMessage>
+		<harmAllLayersUntilOutside>false</harmAllLayersUntilOutside>
+		<defaultDamage>0</defaultDamage>
+	</DamageDef>
+</Defs>

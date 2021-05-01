@@ -1,0 +1,48 @@
+ManifestFileVersion: 0
+CRC: 568753547
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: da7280d5f3231da52656bd0bf290e41d
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: db888c29aaef83638dba77c947e1dd4f
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
+- Class: 198
+  Script: {instanceID: 0}
+- Class: 199
+  Script: {instanceID: 0}
+Assets:
+- Assets/Mat_GlowDot.mat
+- Assets/BlockerVisual.prefab
+- Assets/Fire.prefab
+- Assets/FireBlock.shader
+- Assets/T_Flames.psd
+- Assets/Mat_Fire.mat
+- Assets/T_Spark.psd
+- Assets/Mat_Block.mat
+- Assets/ParticleUnlit.shader
+- Assets/BlockCube.prefab
+- Assets/Mat_Smoke.mat
+- Assets/Smoke.prefab
+- Assets/T_Smoke.psd
+Dependencies: []

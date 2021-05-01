@@ -35,8 +35,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Assets.cs" />
-    <Compile Include="FlameThrower.cs" />
-    <Compile Include="ParticleTools.cs" />
+    <Compile Include="FireBlocker.cs" />
+    <Compile Include="FlamethrowerCompProperties.cs" />
+    <Compile Include="Flamethrower_Flame.cs" />
+    <Compile Include="FlamethrowerComp.cs" />
+    <Compile Include="Renderer.cs" />
     <Compile Include="Tools.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="Patches.cs" />
@@ -53,6 +56,6 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>ModBuilder AssemblyVersion -file "$(TargetPath)" -save "$(ProjectName)-version"
-"$(ProjectDir)Install.bat" "$(ProjectDir)" "$(ProjectName)" "About Assemblies Resources"</PostBuildEvent>
+"$(ProjectDir)Install.bat" "$(ProjectDir)" "$(ProjectName)" "About Assemblies Defs Resources Textures"</PostBuildEvent>
   </PropertyGroup>
 </Project>
