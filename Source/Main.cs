@@ -8,10 +8,12 @@ namespace FlameThrower
 	{
 		public FlameThrowerMain(ModContentPack content) : base(content)
 		{
+			Renderer.Prepare();
+			PawnExtension.Subscribe(new PawnShooterTracker());
+			PawnExtension.Subscribe(new PawnTargetTracker());
+
 			var harmony = new Harmony("net.pardeike.flamethrower");
 			harmony.PatchAll();
-
-			Renderer.Prepare();
 		}
 
 		public override void DoSettingsWindowContents(Rect inRect)

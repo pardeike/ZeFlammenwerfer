@@ -1,6 +1,10 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
+public class MyCollider: BoxCollider
+{
+}
+
 public class TargetScript : MonoBehaviour
 {
 	public List<ParticleCollisionEvent> collisionEvents;

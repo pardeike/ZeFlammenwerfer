@@ -1,16 +1,19 @@
 ﻿using System.Collections.Generic;
+using UnityEngine;
 using Verse;
 
 namespace FlameThrower
 {
-	public class Flamethrower_Flame : Projectile_Explosive
+	public class FlamethrowerFlame : Projectile_Explosive
 	{
-		FlamethrowerComp flamethrower;
+		public FlamethrowerComp flamethrower;
 
-		public void Configure(FlamethrowerComp flamethrower)
+		public void Configure(Pawn launcher, FlamethrowerComp flamethrowerComp)
 		{
-			this.flamethrower = flamethrower;
-			flamethrower.Update(launcher.DrawPos, usedTarget.CenterVector3);
+			flamethrower = flamethrowerComp;
+			if (flamethrower.fire.TryGetComponent<FlamethrowerOwner>(out var ownerComp))
+				ownerComp.launcher = launcher;
+			Update();
 			flamethrower.SetActive(true);
 		}
 
@@ -24,10 +27,16 @@ namespace FlameThrower
 		{
 			base.Tick();
 			if (flamethrower == null) return;
+			Update();
+		}
 
-			var from = launcher.DrawPos;
-			var to = usedTarget.CenterVector3;
-			flamethrower.Update(from, to);
+		public void Update()
+		{
+			var from = launcher.DrawPos.WithHeight(0);
+			var to = usedTarget.CenterVector3.WithHeight(0);
+			var vector = to - from;
+			var startOffset = vector.magnitude > 1f ? vector.normalized : Vector3.zero;
+			flamethrower.Update(from + startOffset, to);
 		}
 
 		protected override void Impact(Thing hitThing)

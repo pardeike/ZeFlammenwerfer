@@ -20,7 +20,7 @@
 			<RangedWeapon_Cooldown>0</RangedWeapon_Cooldown>
 		</statBases>
 		<comps>
-			<li Class="FlameThrower.FlamethrowerCompProperties" />
+			<li Class="FlameThrower.FlamethrowerCompProps" />
 		</comps>
 		<costList>
 			<Steel>100</Steel>
@@ -30,7 +30,7 @@
 			<li>
 				<verbClass>Verb_Shoot</verbClass>
 				<hasStandardCommand>true</hasStandardCommand>
-				<defaultProjectile>Flamethrower_Flame</defaultProjectile>
+				<defaultProjectile>FlamethrowerFlame</defaultProjectile>
 				<warmupTime>1.0</warmupTime>
 				<range>10</range>
 				<forcedMissRadius>2</forcedMissRadius>
@@ -46,9 +46,9 @@
 	</ThingDef>
 
 	<ThingDef ParentName="BaseBullet">
-		<defName>Flamethrower_Flame</defName>
+		<defName>FlamethrowerFlame</defName>
 		<label>FlamethrowerFlame</label>
-		<thingClass>FlameThrower.Flamethrower_Flame</thingClass>
+		<thingClass>FlameThrower.FlamethrowerFlame</thingClass>
 		<graphicData>
 			<texPath>Debug</texPath>
 			<graphicClass>Graphic_Single</graphicClass>

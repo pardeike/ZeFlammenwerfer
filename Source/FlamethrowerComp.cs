@@ -4,6 +4,19 @@ using Verse;
 
 namespace FlameThrower
 {
+	public class FlamethrowerCompProps : CompProperties
+	{
+		public FlamethrowerCompProps()
+		{
+			compClass = typeof(FlamethrowerComp);
+		}
+	}
+
+	public class FlamethrowerOwner : MonoBehaviour
+	{
+		public Pawn launcher;
+	}
+
 	public class FlamethrowerComp : ThingComp
 	{
 		public GameObject fire;
@@ -16,6 +29,7 @@ namespace FlameThrower
 			var maxRange = parent.def.Verbs[0].range;
 
 			fire = Object.Instantiate(Assets.fire);
+			_ = fire.AddComponent(typeof(FlamethrowerOwner));
 			fire.transform.localScale = new Vector3(maxRange, 1, maxRange);
 
 			smoke = Object.Instantiate(Assets.smoke);
@@ -26,15 +40,11 @@ namespace FlameThrower
 			_ = allParticleSystems.Add(fire.GetComponent<ParticleSystem>());
 			_ = allParticleSystems.Add(smoke.GetComponent<ParticleSystem>());
 
-			Log.Warning($"FlamethrowerComp.Initialize");
-
 			base.Initialize(props);
 		}
 
 		~FlamethrowerComp()
 		{
-			Log.Warning($"FlamethrowerComp.Destroy");
-
 			_ = allParticleSystems.Remove(fire.GetComponent<ParticleSystem>());
 			_ = allParticleSystems.Remove(smoke.GetComponent<ParticleSystem>());
 
@@ -46,8 +56,8 @@ namespace FlameThrower
 
 		public void Update(Vector3 from, Vector3 to)
 		{
-			from.y = FireBlocker.moteOverheadHeight;
-			to.y = FireBlocker.moteOverheadHeight;
+			from.y = Tools.moteOverheadHeight;
+			to.y = Tools.moteOverheadHeight;
 
 			fire.transform.position = from;
 			smoke.transform.position = from;

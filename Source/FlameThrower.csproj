@@ -35,10 +35,15 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Assets.cs" />
-    <Compile Include="FireBlocker.cs" />
-    <Compile Include="FlamethrowerCompProperties.cs" />
-    <Compile Include="Flamethrower_Flame.cs" />
+    <Compile Include="ColliderHolder.cs" />
+    <Compile Include="CollisionHandler.cs" />
+    <Compile Include="FireDamage.cs" />
+    <Compile Include="FlameRadiusDetector.cs" />
+    <Compile Include="FlamethrowerFlame.cs" />
     <Compile Include="FlamethrowerComp.cs" />
+    <Compile Include="PawnExtension.cs" />
+    <Compile Include="PawnShooterTracker.cs" />
+    <Compile Include="PawnTargetTracker.cs" />
     <Compile Include="Renderer.cs" />
     <Compile Include="Tools.cs" />
     <Compile Include="Main.cs" />
@@ -52,6 +57,11 @@
     <PackageReference Include="Lib.Harmony">
       <Version>2.0.4</Version>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\Defs\Weapon.xml">
+      <Link>Defs\Weapon.xml</Link>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
