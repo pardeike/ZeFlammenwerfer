@@ -15,8 +15,8 @@ namespace FlameThrower
 
 		public void NewPawn(Pawn pawn)
 		{
-			var collider = ColliderHolder.Get(pawn, true).GetComponent<CapsuleCollider>();
-			collider.name = pawn.LabelCap;
+			var collider = ColliderHolder.Add(pawn).GetComponent<CapsuleCollider>();
+			collider.name = pawn.ThingID;
 			collider.direction = 1; // y-axis
 			collider.height = 5f;
 			collider.radius = 0.8f;
@@ -25,12 +25,10 @@ namespace FlameThrower
 
 		public void UpdatedCenter(Pawn pawn, Vector3 center)
 		{
-			var collider = ColliderHolder.Get(pawn).GetComponent<CapsuleCollider>();
-			if (collider.center.x != center.x || collider.center.z != center.z)
-			{
-				center.y = Tools.moteOverheadHeight;
-				collider.center = center;
-			}
+			var go = ColliderHolder.Get(pawn);
+			if (go == null) return;
+			center.y = Tools.moteOverheadHeight;
+			go.GetComponent<CapsuleCollider>().center = center;
 		}
 
 		public void RemovePawn(Pawn pawn)

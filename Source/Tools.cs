@@ -1,18 +1,24 @@
-﻿using HarmonyLib;
-using RimWorld;
+﻿using RimWorld;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Verse;
+using static HarmonyLib.AccessTools;
 
 namespace FlameThrower
 {
 	public static class Tools
 	{
 		public static readonly float moteOverheadHeight = AltitudeLayer.MoteOverheadLow.AltitudeFor();
-		public static readonly AccessTools.FieldRef<ThingWithComps, List<ThingComp>> compsRef = AccessTools.FieldRefAccess<ThingWithComps, List<ThingComp>>("comps");
-		public static readonly Action<Fire> d_DoComplexCalcs = AccessTools.MethodDelegate<Action<Fire>>(AccessTools.Method(typeof(Fire), "DoComplexCalcs"));
+		public static readonly FieldRef<ThingWithComps, List<ThingComp>> compsRef = FieldRefAccess<ThingWithComps, List<ThingComp>>("comps");
+		public static readonly Action<Fire> d_DoComplexCalcs = MethodDelegate<Action<Fire>>(Method(typeof(Fire), "DoComplexCalcs"));
+
+
+		public static void Log(string _)
+		{
+			// FileLog.Log(log);
+		}
 
 		public static Vector3 WithHeight(this Vector3 vector, float height)
 		{
@@ -40,6 +46,26 @@ namespace FlameThrower
 			return pawn.equipment?.Primary?.def == Defs.Flamethrower;
 		}
 
+		public static void AttachFire(ThingWithComps thing, float amount)
+		{
+			if (!(thing is Pawn pawn) || pawn.RaceProps.IsMechanoid == false)
+			{
+				thing.TryAttachFire(amount);
+				return;
+			}
+			if (pawn.Destroyed || pawn.HasAttachment(ThingDefOf.Fire)) return;
+
+			var attachBase = pawn.TryGetComp<CompAttachBase>();
+			if (attachBase != null)
+			{
+				var fire = (Fire)ThingMaker.MakeThing(ThingDefOf.Fire, null);
+				fire.fireSize = amount;
+				fire.AttachTo(pawn);
+				_ = GenSpawn.Spawn(fire, pawn.Position, pawn.Map, Rot4.North, WipeMode.Vanish, false);
+				pawn.records.Increment(RecordDefOf.TimesOnFire);
+			}
+		}
+
 		public static void ApplyFlameDamage(ThingWithComps thing, float amount)
 		{
 			var fireDamageComp = thing.GetComp<FireDamage>();
@@ -51,9 +77,9 @@ namespace FlameThrower
 					compsRef(thing) = new List<ThingComp>() { fireDamageComp };
 				else
 					compsRef(thing).Add(fireDamageComp);
-
-				thing.TryAttachFire(amount);
 			}
+
+			AttachFire(thing, amount);
 			fireDamageComp.Increase();
 
 			var compAttachBase = thing.TryGetComp<CompAttachBase>();

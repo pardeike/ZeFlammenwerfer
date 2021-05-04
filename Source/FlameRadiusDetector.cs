@@ -10,20 +10,22 @@ namespace FlameThrower
 	{
 		public Pawn shooter;
 		public GameObject go;
-		public static readonly int maxRadius = 8;
+		public static readonly int maxRadius = 9;
 		public static readonly Dictionary<IntVec2, BoxCollider> colliders = new Dictionary<IntVec2, BoxCollider>();
 
 		public FlameRadiusDetector(Pawn pawn)
 		{
 			shooter = pawn;
 
-			go = new GameObject(pawn.LabelCap, typeof(ThingCollisionHandler)) { layer = Renderer.BlockerCullingLevel };
+			go = new GameObject(pawn.ThingID, typeof(ThingCollisionHandler)) { layer = Renderer.BlockerCullingLevel };
 			go.GetComponent<ThingCollisionHandler>().flameRadiusDetector = this;
 			Object.DontDestroyOnLoad(go);
+			Tools.Log($"SHOO ADD {shooter.ThingID}");
 		}
 
 		public void Cleanup()
 		{
+			Tools.Log($"SHOO DEL {shooter.ThingID}");
 			Object.Destroy(go);
 			go = null;
 			colliders.Clear();
@@ -54,6 +56,7 @@ namespace FlameThrower
 				if (blockedCells.Contains(cell) == false)
 				{
 					var collider = colliders[cell];
+					Tools.Log($"CELL DEL {collider.name} {collider.center}");
 					Object.Destroy(collider);
 					_ = colliders.Remove(cell);
 				}
@@ -68,12 +71,12 @@ namespace FlameThrower
 					collider.name = $"{cell.x}x{cell.z}";
 					collider.size = new Vector3(f, 5f, f);
 					collider.center = cell.ToIntVec3.ToVector3ShiftedWithAltitude(Tools.moteOverheadHeight);
-					Log.Warning($"new {collider.center} {collider.size}");
+					Tools.Log($"CELL ADD {collider.name} {collider.center} f={f}");
 					colliders[cell] = collider;
 				}
 				else if (collider.size.x != f || collider.size.z != f)
 				{
-					Log.Warning($"size {collider.center} {collider.size}");
+					Tools.Log($"CELL SET {collider.name} {collider.center} f={f}");
 					collider.size = new Vector3(f, 5f, f);
 				}
 			});

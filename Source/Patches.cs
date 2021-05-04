@@ -74,9 +74,14 @@ namespace FlameThrower
 				{
 					var factor = (thing as Pawn) != null ? factorPawn : factorThing;
 					var newDamage = damage * factor * fireDamageComp.multiplier;
+
+					Tools.Log($"DAMAGE {thing.ThingID} {damage} x {factor} x {fireDamageComp.multiplier} = {newDamage}");
 					return newDamage;
 				}
+				else
+					Tools.Log($"DAMAGE {damage} ON {thing} - NO FireDamage");
 			}
+			Tools.Log($"DAMAGE {thing.ThingID} {damage}");
 			return damage;
 		}
 
@@ -163,6 +168,41 @@ namespace FlameThrower
 			var vec2s = __state.cells.Select(cell => cell.ToIntVec2);
 			if (vec2s.Any(vec2 => map.BlocksFlamethrower(vec2)))
 				PawnShooterTracker.RemoveThing(map, vec2s);
+		}
+	}
+
+	// make mechs flammable
+	//
+	[HarmonyPatch(typeof(StatExtension))]
+	[HarmonyPatch("GetStatValue")]
+	public static class StatExtension_GetStatValue_Patch
+	{
+		const float flammableValue = 0.5f;
+
+		public static bool Prefix(Thing thing, StatDef stat, ref float __result)
+		{
+			if (stat != StatDefOf.Flammability) return true;
+			if (!(thing is Pawn pawn) || pawn.RaceProps.IsMechanoid == false) return true;
+			if (pawn.TryGetComp<FireDamage>() == null) return true;
+			__result = flammableValue;
+			return false;
+		}
+	}
+
+	// make flames hurt them
+	//
+	[HarmonyPatch(typeof(DamageWorker_AddInjury))]
+	[HarmonyPatch("ApplyDamageToPart")]
+	public static class DamageWorker_AddInjury_ApplyDamageToPart_Patch
+	{
+		public static void Prefix(Pawn pawn, ref DamageInfo dinfo)
+		{
+			if (pawn.RaceProps.IsMechanoid == false) return;
+			if (pawn.TryGetComp<FireDamage>() == null) return;
+			var newDinfo = new DamageInfo(dinfo);
+			newDinfo.SetAllowDamagePropagation(false);
+			newDinfo.SetIgnoreArmor(true);
+			dinfo = newDinfo;
 		}
 	}
 }

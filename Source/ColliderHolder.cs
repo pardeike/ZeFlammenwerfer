@@ -15,31 +15,44 @@ namespace FlameThrower
 
 		public static GameObject Add(Pawn pawn)
 		{
-			var go = new GameObject(pawn.LabelCap, typeof(PawnCollisionHandler), typeof(CapsuleCollider)) { layer = Renderer.BlockerCullingLevel };
+			var go = new GameObject(pawn.ThingID, typeof(PawnCollisionHandler), typeof(CapsuleCollider)) { layer = Renderer.BlockerCullingLevel };
 			go.AddComponent<RimWorldPawn>().pawn = pawn;
 			Object.DontDestroyOnLoad(go);
-			holders.Add(pawn, go);
-			return go;
+			if (holders.TryAdd(pawn, go))
+			{
+				Tools.Log($"PAWN ADD {pawn.ThingID}");
+				return go;
+			}
+			else
+			{
+				Tools.Log($"PAWN DUP {pawn.ThingID}");
+				Object.Destroy(go);
+				return Get(pawn);
+			}
 		}
 
-		public static GameObject Get(Pawn pawn, bool create = false)
+		public static GameObject Get(Pawn pawn)
 		{
-			var go = holders.TryGetValue(pawn);
-			if (create && go == null)
-				go = Add(pawn);
-			return go;
+			return holders.TryGetValue(pawn);
 		}
 
 		public static void Remove(Pawn pawn)
 		{
-			Object.Destroy(holders[pawn]);
-			_ = holders.Remove(pawn);
+			if (holders.TryGetValue(pawn, out var holder))
+			{
+				Tools.Log($"PAWN DEL {holder.GetComponent<RimWorldPawn>().pawn.ThingID}");
+				Object.Destroy(holder);
+				_ = holders.Remove(pawn);
+			}
 		}
 
 		public static void ClearAll()
 		{
 			foreach (var pair in holders)
+			{
+				Tools.Log($"PAWN DEL {pair.Value.GetComponent<RimWorldPawn>().pawn.ThingID}");
 				Object.Destroy(pair.Value);
+			}
 			holders.Clear();
 		}
 	}
