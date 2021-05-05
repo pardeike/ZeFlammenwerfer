@@ -9,6 +9,7 @@
 			<texPath>Flamethrower</texPath>
 			<graphicClass>Graphic_Single</graphicClass>
 		</graphicData>
+		<equippedAngleOffset>45</equippedAngleOffset>
 		<generateCommonality>0.4</generateCommonality>
 		<statBases>
 			<WorkToMake>22000</WorkToMake>
@@ -34,7 +35,6 @@
 				<warmupTime>1.0</warmupTime>
 				<range>10</range>
 				<forcedMissRadius>2</forcedMissRadius>
-				<!--<burstShotCount>1</burstShotCount>-->
 				<ticksBetweenBurstShots>20</ticksBetweenBurstShots>
 				<targetParams>
 					<canTargetLocations>true</canTargetLocations>

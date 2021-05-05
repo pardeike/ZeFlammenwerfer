@@ -22,6 +22,61 @@ namespace FlameThrower
 		}
 	}
 
+	[HarmonyPatch(typeof(PawnRenderer))]
+	[HarmonyPatch("RenderPawnInternal")]
+	[HarmonyPatch(new Type[] { typeof(Vector3), typeof(float), typeof(bool), typeof(Rot4), typeof(Rot4), typeof(RotDrawMode), typeof(bool), typeof(bool), typeof(bool) })]
+	public static class PawnRenderer_RenderPawnInternal_Patch
+	{
+		public static Vector3[] offset = new[]
+		{
+			new Vector3(0, 0, 0),
+			new Vector3(-0.3f, 0, 0),
+			new Vector3(-0.35f, 0, 0),
+			new Vector3(0.3f, 0, 0)
+		};
+
+		const float magicOffset = 0.009183673f;
+
+		public static void Postfix(PawnRenderer __instance, Vector3 rootLoc)
+		{
+			var pawn = __instance.graphics.pawn;
+			if (pawn.HasFlameThrower() == false) return;
+
+			var orientation = pawn.Rotation;
+			var location = rootLoc;
+			location.y += magicOffset + (orientation == Rot4.North ? Altitudes.AltInc : -Altitudes.AltInc / 12f);
+
+			Graphics.DrawMesh(MeshPool.plane10, location + offset[orientation.AsInt], Quaternion.identity, Assets.tank, 0);
+		}
+	}
+
+	[HarmonyPatch(typeof(PawnRenderer))]
+	[HarmonyPatch(nameof(PawnRenderer.DrawEquipmentAiming))]
+	public static class PawnRenderer_DrawEquipmentAiming_Patch
+	{
+		public static void Prefix(Thing eq, Pawn ___pawn, ref Vector3 drawLoc, ref float aimAngle)
+		{
+			if (eq.def != Defs.Flamethrower) return;
+			if (___pawn.stances.curStance is Stance_Busy stance_Busy && !stance_Busy.neverAimWeapon && stance_Busy.focusTarg.IsValid) return;
+			switch (___pawn.Rotation.AsInt)
+			{
+				case 0: // N
+					drawLoc.z += 0.1f;
+					aimAngle = 245;
+					break;
+				case 1: // E
+					aimAngle = 123;
+					break;
+				case 2: // S
+					aimAngle = 110;
+					break;
+				case 3: // W
+					aimAngle = 237;
+					break;
+			}
+		}
+	}
+
 	// start/stop flamethrowers when game is paused/resumed
 	//
 	[HarmonyPatch]

@@ -12,6 +12,7 @@ namespace FlameThrower
 		public static readonly GameObject fire = assets.LoadAsset<GameObject>("Fire");
 		public static readonly GameObject smoke = assets.LoadAsset<GameObject>("Smoke");
 		public static readonly GameObject blockCube = assets.LoadAsset<GameObject>("BlockCube"); // visually blocks flames
+		public static readonly Material tank = MaterialPool.MatFrom("Tank", ShaderDatabase.Cutout);
 
 		static Assets()
 		{
