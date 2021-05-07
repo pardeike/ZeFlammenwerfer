@@ -1,12 +1,12 @@
 ManifestFileVersion: 0
-CRC: 568753547
+CRC: 1596013116
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: da7280d5f3231da52656bd0bf290e41d
+    Hash: 84e8ca5c6367ea4e9947fcd5ceb1f3e3
   TypeTreeHash:
     serializedVersion: 2
-    Hash: db888c29aaef83638dba77c947e1dd4f
+    Hash: 93f7e67b99ff3df15df9f63d53f4b3ca
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -27,6 +27,18 @@ ClassTypes:
   Script: {instanceID: 0}
 - Class: 65
   Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: fc0d3f47adc396840ae242d71af86f31, type: 3}
+- Class: 114
+  Script: {fileID: -452957093, guid: 3e5d96a5ad2822048ba575ddbd6617ff, type: 3}
+- Class: 114
+  Script: {fileID: 1411642610, guid: 3e5d96a5ad2822048ba575ddbd6617ff, type: 3}
+- Class: 114
+  Script: {fileID: -1928136917, guid: 3e5d96a5ad2822048ba575ddbd6617ff, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+- Class: 120
+  Script: {instanceID: 0}
 - Class: 198
   Script: {instanceID: 0}
 - Class: 199
@@ -34,9 +46,12 @@ ClassTypes:
 Assets:
 - Assets/Mat_GlowDot.mat
 - Assets/BlockerVisual.prefab
+- Assets/CurveOuter.prefab
 - Assets/Fire.prefab
+- Assets/CurveOuter.mat
 - Assets/FireBlock.shader
 - Assets/T_Flames.psd
+- Assets/CurveInner.prefab
 - Assets/Mat_Fire.mat
 - Assets/T_Spark.psd
 - Assets/Mat_Block.mat
@@ -45,4 +60,5 @@ Assets:
 - Assets/Mat_Smoke.mat
 - Assets/Smoke.prefab
 - Assets/T_Smoke.psd
+- Assets/CurveInner.mat
 Dependencies: []

@@ -1,4 +1,5 @@
-﻿using RimWorld;
+﻿using BansheeGz.BGSpline.Curve;
+using RimWorld;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -101,6 +102,13 @@ namespace FlameThrower
 				if (cellFire.fireSize < amount)
 					cellFire.fireSize = amount;
 			}
+		}
+
+		public static BGCurvePointI[] AddPoints(this BGCurve curve)
+		{
+			var p1 = new BGCurvePoint(curve, Vector3.zero, BGCurvePoint.ControlTypeEnum.BezierIndependant, Vector3.zero, Vector3.zero);
+			var p2 = new BGCurvePoint(curve, Vector3.zero, BGCurvePoint.ControlTypeEnum.BezierIndependant, Vector3.zero, Vector3.zero);
+			return new[] { curve.AddPoint(p1), curve.AddPoint(p2) };
 		}
 	}
 }

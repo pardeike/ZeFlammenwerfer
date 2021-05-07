@@ -27,15 +27,7 @@ namespace FlameThrower
 	[HarmonyPatch(new Type[] { typeof(Vector3), typeof(float), typeof(bool), typeof(Rot4), typeof(Rot4), typeof(RotDrawMode), typeof(bool), typeof(bool), typeof(bool) })]
 	public static class PawnRenderer_RenderPawnInternal_Patch
 	{
-		public static Vector3[] offset = new[]
-		{
-			new Vector3(0, 0, 0),
-			new Vector3(-0.3f, 0, 0),
-			new Vector3(-0.35f, 0, 0),
-			new Vector3(0.3f, 0, 0)
-		};
-
-		const float magicOffset = 0.009183673f;
+		public const float magicOffset = 0.009183673f;
 
 		public static void Postfix(PawnRenderer __instance, Vector3 rootLoc)
 		{
@@ -46,11 +38,15 @@ namespace FlameThrower
 			var location = rootLoc;
 			location.y += magicOffset + (orientation == Rot4.North ? Altitudes.AltInc : -Altitudes.AltInc / 12f);
 
-			Graphics.DrawMesh(MeshPool.plane10, location + offset[orientation.AsInt], Quaternion.identity, Assets.tank, 0);
+			Graphics.DrawMesh(MeshPool.plane10, location + FlamethrowerComp.tankOffset[orientation.AsInt], Quaternion.identity, Assets.tank, 0);
+
+			var flamethrower = pawn.equipment.Primary.TryGetComp<FlamethrowerComp>();
+			if (flamethrower == null) return;
+			flamethrower.UpdateDrawPos(pawn);
 		}
 	}
 
-	[HarmonyPatch(typeof(PawnRenderer))]
+	/*[HarmonyPatch(typeof(PawnRenderer))]
 	[HarmonyPatch(nameof(PawnRenderer.DrawEquipmentAiming))]
 	public static class PawnRenderer_DrawEquipmentAiming_Patch
 	{
@@ -75,7 +71,7 @@ namespace FlameThrower
 					break;
 			}
 		}
-	}
+	}*/
 
 	// start/stop flamethrowers when game is paused/resumed
 	//

@@ -64,9 +64,24 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\BansheeGz\BGCurve\Examples\Scripts\BGTestCamera.cs" />
+    <Compile Include="Assets\BansheeGz\BGCurve\Examples\Scripts\BGTestCcChangeCursorLinear.cs" />
+    <Compile Include="Assets\BansheeGz\BGCurve\Examples\Scripts\BGTestCurveChange.cs" />
+    <Compile Include="Assets\BansheeGz\BGCurve\Examples\Scripts\BGTestCurveClosestPoint.cs" />
+    <Compile Include="Assets\BansheeGz\BGCurve\Examples\Scripts\BGTestCurveDynamic.cs" />
+    <Compile Include="Assets\BansheeGz\BGCurve\Examples\Scripts\BGTestCurveMath.cs" />
+    <Compile Include="Assets\BansheeGz\BGCurve\Examples\Scripts\BGTestCurveRuntime.cs" />
+    <Compile Include="Assets\BansheeGz\BGCurve\Examples\Scripts\BGTestCurveRuntimeCustomFields.cs" />
+    <Compile Include="Assets\BansheeGz\BGCurve\Examples\Scripts\BGTestCurveShowcase.cs" />
+    <Compile Include="Assets\BansheeGz\BGCurve\Examples\Scripts\BGTestCurveSnapping.cs" />
+    <Compile Include="Assets\BansheeGz\BGCurve\Examples\Scripts\BGTestCurveStatic.cs" />
+    <Compile Include="Assets\BansheeGz\BGCurve\Examples\Scripts\BGTestDirector.cs" />
+    <Compile Include="Assets\BansheeGz\BGCurve\Examples\Scripts\BGTestMainMenu.cs" />
+    <Compile Include="Assets\BansheeGz\BGCurve\Examples\Scripts\BGTestPerformance.cs" />
     <Compile Include="Assets\NewBehaviourScript.cs" />
     <Compile Include="Assets\TargetScript.cs" />
     <None Include="Assets\FireBlock.shader" />
+    <None Include="Assets\BansheeGz\BGCurve\readme.txt" />
     <None Include="Assets\ParticleUnlit.shader" />
     <Reference Include="Unity.Timeline.Editor">
       <HintPath>C:/Users/andre/Source/ModRepos/FlameThrower/Originals/FlameThrowerUnity/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
@@ -271,6 +286,9 @@
     </Reference>
     <Reference Include="UnityEngine.XRModule">
       <HintPath>C:/Program Files/Unity/Hub/Editor/2019.2.17f1/Editor/Data/Managed/UnityEngine/UnityEngine.XRModule.dll</HintPath>
+    </Reference>
+    <Reference Include="BansheeGz">
+      <HintPath>C:/Users/andre/Source/ModRepos/FlameThrower/Originals/FlameThrowerUnity/Assets/BansheeGz.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib">
       <HintPath>C:/Program Files/Unity/Hub/Editor/2019.2.17f1/Editor/Data/MonoBleedingEdge/lib/mono/4.7.1-api/mscorlib.dll</HintPath>

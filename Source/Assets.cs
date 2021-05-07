@@ -11,6 +11,8 @@ namespace FlameThrower
 		public static readonly AssetBundle assets = LoadAssetBundle();
 		public static readonly GameObject fire = assets.LoadAsset<GameObject>("Fire");
 		public static readonly GameObject smoke = assets.LoadAsset<GameObject>("Smoke");
+		public static readonly GameObject curveInner = assets.LoadAsset<GameObject>("CurveInner");
+		public static readonly GameObject curveOuter = assets.LoadAsset<GameObject>("CurveOuter");
 		public static readonly GameObject blockCube = assets.LoadAsset<GameObject>("BlockCube"); // visually blocks flames
 		public static readonly Material tank = MaterialPool.MatFrom("Tank", ShaderDatabase.Cutout);
 
@@ -18,6 +20,8 @@ namespace FlameThrower
 		{
 			Object.DontDestroyOnLoad(fire);
 			Object.DontDestroyOnLoad(smoke);
+			Object.DontDestroyOnLoad(curveInner);
+			Object.DontDestroyOnLoad(curveOuter);
 			Object.DontDestroyOnLoad(blockCube);
 		}
 

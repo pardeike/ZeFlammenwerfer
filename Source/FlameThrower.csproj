@@ -45,6 +45,7 @@
     <Compile Include="PawnShooterTracker.cs" />
     <Compile Include="PawnTargetTracker.cs" />
     <Compile Include="Renderer.cs" />
+    <Compile Include="WeaponTool.cs" />
     <Compile Include="Tools.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="Patches.cs" />
@@ -62,6 +63,13 @@
     <Content Include="..\Defs\Weapon.xml">
       <Link>Defs\Weapon.xml</Link>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="BansheeGz, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Assemblies\BansheeGz.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
