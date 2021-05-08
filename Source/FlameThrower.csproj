@@ -45,6 +45,7 @@
     <Compile Include="PawnShooterTracker.cs" />
     <Compile Include="PawnTargetTracker.cs" />
     <Compile Include="Renderer.cs" />
+    <Compile Include="FlameThrowerSound.cs" />
     <Compile Include="WeaponTool.cs" />
     <Compile Include="Tools.cs" />
     <Compile Include="Main.cs" />
@@ -74,6 +75,6 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>ModBuilder AssemblyVersion -file "$(TargetPath)" -save "$(ProjectName)-version"
-"$(ProjectDir)Install.bat" "$(ProjectDir)" "$(ProjectName)" "About Assemblies Defs Resources Textures"</PostBuildEvent>
+"$(ProjectDir)Install.bat" "$(ProjectDir)" "$(ProjectName)" "About Assemblies Defs Resources Sounds Textures"</PostBuildEvent>
   </PropertyGroup>
 </Project>

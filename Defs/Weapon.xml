@@ -32,10 +32,10 @@
 				<verbClass>Verb_Shoot</verbClass>
 				<hasStandardCommand>true</hasStandardCommand>
 				<defaultProjectile>FlamethrowerFlame</defaultProjectile>
-				<warmupTime>1.0</warmupTime>
+				<forcedMissRadius>0.5</forcedMissRadius>
+				<warmupTime>1.5</warmupTime>
+				<ticksBetweenBurstShots>60</ticksBetweenBurstShots>
 				<range>10</range>
-				<forcedMissRadius>2</forcedMissRadius>
-				<ticksBetweenBurstShots>20</ticksBetweenBurstShots>
 				<targetParams>
 					<canTargetLocations>true</canTargetLocations>
 				</targetParams>

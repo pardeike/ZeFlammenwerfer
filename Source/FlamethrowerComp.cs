@@ -1,4 +1,5 @@
 ﻿using BansheeGz.BGSpline.Curve;
+using HarmonyLib;
 using System.Collections.Generic;
 using UnityEngine;
 using Verse;
@@ -22,6 +23,9 @@ namespace FlameThrower
 	{
 		public GameObject fire;
 		public GameObject smoke;
+		public FlameThrowerSound sound;
+		public List<FlamethrowerFlame> flames = new List<FlamethrowerFlame>();
+		public bool isActive;
 
 		public GameObject curveInner, curveOuter;
 		public BGCurvePointI[] pointsInner, pointsOuter;
@@ -71,6 +75,7 @@ namespace FlameThrower
 			pointsOuter = curve2.AddPoints();
 
 			UpdateDrawPos(parent as Pawn);
+			sound = new FlameThrowerSound(fire);
 			SetActive(false);
 
 			_ = allParticleSystems.Add(fire.GetComponent<ParticleSystem>());
@@ -109,12 +114,17 @@ namespace FlameThrower
 		public void UpdateDrawPos(Pawn pawn)
 		{
 			if (pawn == null) return;
+			var (center, angle) = WeaponTool.GetAimingCenter(pawn);
+			if (angle == int.MinValue)
+			{
+				curveInner.SetActive(false);
+				curveOuter.SetActive(false);
+				return;
+			}
 
 			var drawPos = pawn.DrawPos;
 			var orientation = pawn.Rotation;
 			Vector3 control;
-
-			var (center, angle) = WeaponTool.GetAimingCenter(pawn);
 			var flipped = WeaponTool.IsFlipped(angle);
 
 			curveInner.transform.position = drawPos;
@@ -140,8 +150,20 @@ namespace FlameThrower
 			pointsOuter[1].ControlFirstWorld = control;
 		}
 
+		public bool IsActive() => isActive;
+
 		public void SetActive(bool active)
 		{
+			isActive = active;
+			if (active)
+				sound.Start();
+			else
+			{
+				flames.DoIf(f => f.Destroyed == false, f => f.Destroy(DestroyMode.Vanish));
+				flames.Clear();
+				sound.Stop();
+			}
+
 			var emission1 = fire.GetComponent<ParticleSystem>().emission;
 			emission1.enabled = active;
 			var emission2 = smoke.GetComponent<ParticleSystem>().emission;

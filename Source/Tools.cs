@@ -2,6 +2,7 @@
 using RimWorld;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEngine;
 using Verse;
@@ -15,6 +16,11 @@ namespace FlameThrower
 		public static readonly FieldRef<ThingWithComps, List<ThingComp>> compsRef = FieldRefAccess<ThingWithComps, List<ThingComp>>("comps");
 		public static readonly Action<Fire> d_DoComplexCalcs = MethodDelegate<Action<Fire>>(Method(typeof(Fire), "DoComplexCalcs"));
 
+		public static string GetAssetsPath(string folder, string fileName)
+		{
+			var root = LoadedModManager.GetMod<FlameThrowerMain>()?.Content.RootDir ?? "";
+			return Path.Combine(root, folder, fileName);
+		}
 
 		public static void Log(string _)
 		{

@@ -1,0 +1,26 @@
+<?xml version="1.0" standalone="no" ?>
+<!DOCTYPE project PUBLIC "-//audacityproject-1.3.0//DTD//EN" "http://audacity.sourceforge.net/xml/audacityproject-1.3.0.dtd" >
+<project xmlns="http://audacity.sourceforge.net/xml/" projname="Flamethrower_data" version="1.3.0" audacityversion="2.4.2" sel0="6.6640870293" sel1="7.4319166667" vpos="0" h="0.0000000000" zoom="210.9816384181" rate="48000.0" snapto="off" selectionformat="samples" frequencyformat="Hz" bandwidthformat="octaves">
+	<tags/>
+	<wavetrack name="396890__pugaeme__flamethrower" isSelected="1" height="150" minimized="0" channel="2" linked="0" mute="0" solo="0" rate="48000" gain="1.0" pan="0.0" colorindex="0">
+		<waveclip offset="0.00000000" colorindex="0">
+			<sequence maxsamples="262144" sampleformat="262159" numsamples="356732">
+				<waveblock start="0">
+					<simpleblockfile filename="e0808d42.au" len="168638" min="-0.829393" max="0.880874" rms="0.145879"/>
+				</waveblock>
+				<waveblock start="168638">
+					<simpleblockfile filename="e08088cf.au" len="168638" min="-0.814838" max="0.67787" rms="0.159666"/>
+				</waveblock>
+				<waveblock start="337276">
+					<simpleblockfile filename="e08080f3.au" len="19456" min="-0.090361" max="0.089135" rms="0.008885"/>
+				</waveblock>
+			</sequence>
+			<envelope numpoints="0"/>
+		</waveclip>
+	</wavetrack>
+	<labeltrack name="Label Track" isSelected="1" height="73" minimized="0" numlabels="3">
+		<label t="0.0000000000" t1="0.6920033473" title="RampUp"/>
+		<label t="1.8958995816" t1="3.3557422594" title="Loop"/>
+		<label t="6.6640870293" t1="7.4319166667" title="RampDown"/>
+	</labeltrack>
+</project>
