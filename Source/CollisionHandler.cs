@@ -5,7 +5,7 @@ using System.Linq;
 using UnityEngine;
 using Verse;
 
-namespace FlameThrower
+namespace ZeFlammenwerfer
 {
 	public class PawnCollisionHandler : MonoBehaviour
 	{
@@ -20,7 +20,7 @@ namespace FlameThrower
 		{
 			var particleSystem = other.GetComponent<ParticleSystem>();
 			if (particleSystem == null) return;
-			var launcher = other.GetComponent<FlamethrowerOwner>()?.launcher;
+			var launcher = other.GetComponent<ZeOwner>()?.launcher;
 
 			_ = particleSystem.GetCollisionEvents(gameObject, collisionEvents);
 			foreach (var collision in collisionEvents)

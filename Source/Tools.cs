@@ -8,7 +8,7 @@ using UnityEngine;
 using Verse;
 using static HarmonyLib.AccessTools;
 
-namespace FlameThrower
+namespace ZeFlammenwerfer
 {
 	public static class Tools
 	{
@@ -18,7 +18,7 @@ namespace FlameThrower
 
 		public static string GetAssetsPath(string folder, string fileName)
 		{
-			var root = LoadedModManager.GetMod<FlameThrowerMain>()?.Content.RootDir ?? "";
+			var root = LoadedModManager.GetMod<ZeFlammenwerferMain>()?.Content.RootDir ?? "";
 			return Path.Combine(root, folder, fileName);
 		}
 
@@ -50,7 +50,7 @@ namespace FlameThrower
 
 		public static bool HasFlameThrower(this Pawn pawn)
 		{
-			return pawn.equipment?.Primary?.def == Defs.Flamethrower;
+			return pawn.equipment?.Primary?.def == Defs.ZeFlammenwerfer;
 		}
 
 		public static void AttachFire(ThingWithComps thing, float amount)

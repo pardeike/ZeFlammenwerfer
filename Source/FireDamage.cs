@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using Verse;
 
-namespace FlameThrower
+namespace ZeFlammenwerfer
 {
 	public class FireDamage : ThingComp
 	{
@@ -9,6 +9,7 @@ namespace FlameThrower
 
 		public override void PostExposeData()
 		{
+			base.PostExposeData();
 			Scribe_Values.Look(ref multiplier, "multiplier", 1, false);
 		}
 
@@ -19,6 +20,7 @@ namespace FlameThrower
 
 		public override void CompTick()
 		{
+			base.CompTick();
 			multiplier = Mathf.Max(1f, multiplier / 1.02f);
 		}
 	}

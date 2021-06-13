@@ -3,7 +3,7 @@ using System.IO;
 using UnityEngine;
 using Verse;
 
-namespace FlameThrower
+namespace ZeFlammenwerfer
 {
 	[StaticConstructorOnStartup]
 	public static class Assets
@@ -27,7 +27,7 @@ namespace FlameThrower
 
 		public static string GetModRootDirectory()
 		{
-			var me = LoadedModManager.GetMod<FlameThrowerMain>();
+			var me = LoadedModManager.GetMod<ZeFlammenwerferMain>();
 			return me.Content.RootDir;
 		}
 
@@ -41,6 +41,6 @@ namespace FlameThrower
 	[DefOf]
 	public static class Defs
 	{
-		public static ThingDef Flamethrower;
+		public static ThingDef ZeFlammenwerfer;
 	}
 }

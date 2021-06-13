@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEngine;
 using Verse;
 
-namespace FlameThrower
+namespace ZeFlammenwerfer
 {
 	public class PawnShooterTracker : IPawnSubscriber
 	{

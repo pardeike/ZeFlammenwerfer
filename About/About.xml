@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ModMetaData>
-	<name>FlameThrower</name>
+	<name>Ze Flammenwerfer</name>
 	<author>Andreas Pardeike</author>
 	<supportedVersions>
 		<li>1.2</li>
@@ -13,7 +13,7 @@
 			<downloadUrl>https://github.com/pardeike/HarmonyRimWorld/releases/latest</downloadUrl>
 		</li>
 	</modDependencies>
-	<packageId>brrainz.flamethrower</packageId>
+	<packageId>brrainz.zeflammenwerfer</packageId>
 	<description>Burn, baby, burn!
 
 Powered by Harmony Patch Library

@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using Verse;
 
-namespace FlameThrower
+namespace ZeFlammenwerfer
 {
 	public class PawnTargetTracker : IPawnSubscriber
 	{

@@ -2,7 +2,7 @@
 using UnityEngine;
 using Verse;
 
-namespace FlameThrower
+namespace ZeFlammenwerfer
 {
 	public static class ColliderHolder
 	{

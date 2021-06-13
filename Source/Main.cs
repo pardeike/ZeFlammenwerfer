@@ -2,17 +2,17 @@
 using UnityEngine;
 using Verse;
 
-namespace FlameThrower
+namespace ZeFlammenwerfer
 {
-	public class FlameThrowerMain : Mod
+	public class ZeFlammenwerferMain : Mod
 	{
-		public FlameThrowerMain(ModContentPack content) : base(content)
+		public ZeFlammenwerferMain(ModContentPack content) : base(content)
 		{
 			Renderer.Prepare();
 			PawnExtension.Subscribe(new PawnShooterTracker());
 			PawnExtension.Subscribe(new PawnTargetTracker());
 
-			var harmony = new Harmony("net.pardeike.flamethrower");
+			var harmony = new Harmony("net.pardeike.ze.flammenwerfer");
 			harmony.PatchAll();
 		}
 

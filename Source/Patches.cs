@@ -8,12 +8,11 @@ using System.Reflection.Emit;
 using UnityEngine;
 using Verse;
 
-namespace FlameThrower
+namespace ZeFlammenwerfer
 {
 	// remove fire deflect sound (too many when hit with a flamethrower)
 	//
-	[HarmonyPatch(typeof(Effecter))]
-	[HarmonyPatch(nameof(Effecter.Trigger))]
+	[HarmonyPatch(typeof(Effecter), nameof(Effecter.Trigger))]
 	public static class Effecter_Trigger_Patch
 	{
 		public static bool Prefix(Effecter __instance, TargetInfo B)
@@ -24,8 +23,7 @@ namespace FlameThrower
 
 	// draw tank and pipe
 	//
-	[HarmonyPatch(typeof(PawnRenderer))]
-	[HarmonyPatch("RenderPawnInternal")]
+	[HarmonyPatch(typeof(PawnRenderer), "RenderPawnInternal")]
 	[HarmonyPatch(new Type[] { typeof(Vector3), typeof(float), typeof(bool), typeof(Rot4), typeof(Rot4), typeof(RotDrawMode), typeof(bool), typeof(bool), typeof(bool) })]
 	public static class PawnRenderer_RenderPawnInternal_Patch
 	{
@@ -34,17 +32,36 @@ namespace FlameThrower
 		public static void Postfix(PawnRenderer __instance, Vector3 rootLoc)
 		{
 			var pawn = __instance.graphics.pawn;
+			if (pawn.Downed || pawn.Dead) return;
 			if (pawn.HasFlameThrower() == false) return;
 
 			var orientation = pawn.Rotation;
 			var location = rootLoc;
 			location.y += magicOffset + (orientation == Rot4.North ? Altitudes.AltInc : -Altitudes.AltInc / 12f);
 
-			Graphics.DrawMesh(MeshPool.plane10, location + FlamethrowerComp.tankOffset[orientation.AsInt], Quaternion.identity, Assets.tank, 0);
+			Graphics.DrawMesh(MeshPool.plane10, location + ZeFlameComp.tankOffset[orientation.AsInt], Quaternion.identity, Assets.tank, 0);
 
-			var flamethrower = pawn.equipment?.Primary?.TryGetComp<FlamethrowerComp>();
-			if (flamethrower == null) return;
-			flamethrower.UpdateDrawPos(pawn);
+			var flameComp = pawn.equipment?.Primary?.TryGetComp<ZeFlameComp>();
+			if (flameComp == null) return;
+			flameComp.UpdateDrawPos(pawn);
+		}
+	}
+
+	// init our static gameobject holder when a game is initialized
+	//
+	[HarmonyPatch]
+	public static class Game_InitNewGame_LoadGame_Patch
+	{
+		public static IEnumerable<MethodBase> TargetMethods()
+		{
+			yield return SymbolExtensions.GetMethodInfo(() => new Game().InitNewGame());
+			yield return SymbolExtensions.GetMethodInfo(() => new Game().LoadGame());
+		}
+
+		public static void Prefix()
+		{
+			ZeFlameComp.allParticleSystems?.Do(particleSystem => UnityEngine.Object.DestroyImmediate(particleSystem));
+			ZeFlameComp.allParticleSystems = new HashSet<ParticleSystem>();
 		}
 	}
 
@@ -57,28 +74,18 @@ namespace FlameThrower
 		{
 			yield return AccessTools.Method(typeof(TickManager), nameof(TickManager.TogglePaused));
 			yield return AccessTools.PropertySetter(typeof(TickManager), nameof(TickManager.CurTimeSpeed));
-			yield return AccessTools.Constructor(typeof(TickManager), new Type[0]);
 		}
 
-		public static void Postfix(TickManager __instance, MethodBase __originalMethod)
+		public static void Postfix(TickManager __instance)
 		{
 			if (__instance == null || Current.Game == null) return;
 			var paused = __instance.Paused;
 
-			if (__originalMethod.IsConstructor)
-			{
-				if (FlamethrowerComp.allParticleSystems == null)
-					FlamethrowerComp.allParticleSystems = new HashSet<ParticleSystem>();
-				FlamethrowerComp.allParticleSystems.Do(particleSystem => UnityEngine.Object.DestroyImmediate(particleSystem));
-				FlamethrowerComp.allParticleSystems.Clear();
-			}
-
-			var toUpdate = FlamethrowerComp.allParticleSystems.Where(ps => ps.isPaused != paused);
-			foreach (var particleSystem in toUpdate)
+			ZeFlameComp.allParticleSystems.Where(ps => ps.isPaused != paused).Do(particleSystem =>
 			{
 				if (paused) particleSystem.Pause(true);
 				else particleSystem.Play(true);
-			}
+			});
 		}
 	}
 
@@ -90,10 +97,10 @@ namespace FlameThrower
 		public static void Postfix(ThingWithComps __instance)
 		{
 			var pawn = __instance as Pawn;
-			var flamethrower = pawn?.equipment?.Primary?.TryGetComp<FlamethrowerComp>();
-			if (flamethrower == null) return;
-			if (WeaponTool.IsAiming(pawn) == false && flamethrower.isActive)
-				flamethrower.SetActive(false);
+			var flameComp = pawn?.equipment?.Primary?.TryGetComp<ZeFlameComp>();
+			if (flameComp == null) return;
+			if (WeaponTool.IsAiming(pawn) == false && flameComp.isActive)
+				flameComp.SetActive(false);
 		}
 	}
 
@@ -104,8 +111,8 @@ namespace FlameThrower
 	{
 		public static void Prefix(ThingWithComps eq)
 		{
-			var flamethrower = eq.TryGetComp<FlamethrowerComp>();
-			flamethrower?.SetActive(false);
+			var flameComp = eq.TryGetComp<ZeFlameComp>();
+			flameComp?.SetActive(false);
 		}
 	}
 
@@ -116,7 +123,7 @@ namespace FlameThrower
 	{
 		public static void Postfix(Thing __instance, IntVec3 value)
 		{
-			if (__instance is FlamethrowerFlame flame)
+			if (__instance is ZeFlame flame)
 			{
 				var map = flame.Map;
 				if (map != null && value.DistanceToSquared(flame.Launcher.Position) > 4)
@@ -134,8 +141,7 @@ namespace FlameThrower
 
 	// limit new fire bullet casts
 	//
-	[HarmonyPatch(typeof(Pawn_StanceTracker))]
-	[HarmonyPatch(nameof(Pawn_StanceTracker.StanceTrackerTick))]
+	[HarmonyPatch(typeof(Pawn_StanceTracker), nameof(Pawn_StanceTracker.StanceTrackerTick))]
 	public static class Pawn_StanceTracker_StanceTrackerTick_Patch
 	{
 		const int maximumNumberOfBullets = 5;
@@ -143,8 +149,8 @@ namespace FlameThrower
 		public static bool SkipStanceTickIfNecessary(bool flag, Pawn_StanceTracker stanceTracker)
 		{
 			if ((stanceTracker.curStance is Stance_Warmup) == false) return flag;
-			var flamethrower = stanceTracker.pawn.equipment?.Primary?.TryGetComp<FlamethrowerComp>();
-			return flag || (flamethrower?.flames.Count ?? 0) >= maximumNumberOfBullets;
+			var flameComp = stanceTracker.pawn.equipment?.Primary?.TryGetComp<ZeFlameComp>();
+			return flag || (flameComp?.flames.Count ?? 0) >= maximumNumberOfBullets;
 		}
 
 		public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
@@ -163,8 +169,7 @@ namespace FlameThrower
 
 	// increase fire damage when a thing has a FireDamage comp
 	//
-	[HarmonyPatch(typeof(Fire))]
-	[HarmonyPatch("DoFireDamage")]
+	[HarmonyPatch(typeof(Fire), "DoFireDamage")]
 	public static class Fire_DoFireDamage_Patch
 	{
 		const float factorPawn = 0.001f;
@@ -227,27 +232,25 @@ namespace FlameThrower
 
 	// attach flamethrower logic to custom projectile
 	//
-	[HarmonyPatch(typeof(Projectile))]
-	[HarmonyPatch(nameof(Projectile.Launch))]
+	[HarmonyPatch(typeof(Projectile), nameof(Projectile.Launch))]
 	[HarmonyPatch(new[] { typeof(Thing), typeof(Vector3), typeof(LocalTargetInfo), typeof(LocalTargetInfo), typeof(ProjectileHitFlags), typeof(Thing), typeof(ThingDef) })]
 	public static class Projectile_Launch_Patch
 	{
 		public static void Postfix(Thing launcher, Projectile __instance, Thing equipment)
 		{
-			if (!(__instance is FlamethrowerFlame flame)) return;
+			if (!(__instance is ZeFlame flame)) return;
 			if (launcher is Pawn pawn)
 			{
-				var flamethrower = equipment?.TryGetComp<FlamethrowerComp>();
-				if (flamethrower == null) return;
-				flame.Configure(pawn, flamethrower);
+				var flameComp = equipment?.TryGetComp<ZeFlameComp>();
+				if (flameComp == null) return;
+				flame.Configure(pawn, flameComp);
 			}
 		}
 	}
 
 	// handle when things disappear
 	//
-	[HarmonyPatch(typeof(Thing))]
-	[HarmonyPatch(nameof(Thing.Destroy))]
+	[HarmonyPatch(typeof(Thing), nameof(Thing.Destroy))]
 	public static class Thing_Destroy_Patch
 	{
 		public class Info
@@ -278,8 +281,7 @@ namespace FlameThrower
 
 	// make mechs flammable
 	//
-	[HarmonyPatch(typeof(StatExtension))]
-	[HarmonyPatch("GetStatValue")]
+	[HarmonyPatch(typeof(StatExtension), "GetStatValue")]
 	public static class StatExtension_GetStatValue_Patch
 	{
 		const float flammableValue = 0.5f;
@@ -296,8 +298,7 @@ namespace FlameThrower
 
 	// make flames hurt them
 	//
-	[HarmonyPatch(typeof(DamageWorker_AddInjury))]
-	[HarmonyPatch("ApplyDamageToPart")]
+	[HarmonyPatch(typeof(DamageWorker_AddInjury), "ApplyDamageToPart")]
 	public static class DamageWorker_AddInjury_ApplyDamageToPart_Patch
 	{
 		public static void Prefix(Pawn pawn, ref DamageInfo dinfo)

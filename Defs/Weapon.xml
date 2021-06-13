@@ -2,11 +2,11 @@
 <Defs>
 
 	<ThingDef ParentName="BaseHumanMakeableGun">
-		<defName>Flamethrower</defName>
-		<label>Flamethrower</label>
-		<description>This is a flamethrower</description>
+		<defName>ZeFlammenwerfer</defName>
+		<label>Ze Flammenwerfer</label>
+		<description>Dis is ze flammenwerfer</description>
 		<graphicData>
-			<texPath>Flamethrower</texPath>
+			<texPath>ZeFlammenwerfer</texPath>
 			<graphicClass>Graphic_Single</graphicClass>
 		</graphicData>
 		<equippedAngleOffset>45</equippedAngleOffset>
@@ -21,7 +21,7 @@
 			<RangedWeapon_Cooldown>0</RangedWeapon_Cooldown>
 		</statBases>
 		<comps>
-			<li Class="FlameThrower.FlamethrowerCompProps" />
+			<li Class="ZeFlammenwerfer.ZeFlameCompProps" />
 		</comps>
 		<costList>
 			<Steel>100</Steel>
@@ -31,7 +31,7 @@
 			<li>
 				<verbClass>Verb_Shoot</verbClass>
 				<hasStandardCommand>true</hasStandardCommand>
-				<defaultProjectile>FlamethrowerFlame</defaultProjectile>
+				<defaultProjectile>ZeFlame</defaultProjectile>
 				<forcedMissRadius>0.5</forcedMissRadius>
 				<warmupTime>1.5</warmupTime>
 				<ticksBetweenBurstShots>60</ticksBetweenBurstShots>
@@ -46,9 +46,9 @@
 	</ThingDef>
 
 	<ThingDef ParentName="BaseBullet">
-		<defName>FlamethrowerFlame</defName>
-		<label>FlamethrowerFlame</label>
-		<thingClass>FlameThrower.FlamethrowerFlame</thingClass>
+		<defName>ZeFlame</defName>
+		<label>Ze flamme of ze flammenwerfer</label>
+		<thingClass>ZeFlammenwerfer.ZeFlame</thingClass>
 		<graphicData>
 			<texPath>Debug</texPath>
 			<graphicClass>Graphic_Single</graphicClass>
