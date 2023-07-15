@@ -23,10 +23,10 @@ namespace ZeFlammenwerfer
 
 	// draw tank and pipe
 	//
-	[HarmonyPatch(typeof(PawnRenderer), nameof(PawnRenderer.RenderPawnInternal))]
+	[HarmonyPatch(typeof(PawnRenderer), nameof(PawnRenderer.DrawDynamicParts))]
 	public static class PawnRenderer_RenderPawnInternal_Patch
 	{
-		public const float magicOffset = 0.009183673f;
+		public const float magicOffset = 0.008687258f;
 
 		public static void Postfix(PawnRenderer __instance, Vector3 rootLoc)
 		{
@@ -38,8 +38,7 @@ namespace ZeFlammenwerfer
 
 			var orientation = pawn.Rotation;
 			var location = rootLoc;
-			location.y += magicOffset + (orientation == Rot4.North ? Altitudes.AltInc : -Altitudes.AltInc / 12f);
-
+			location.y += magicOffset + (orientation == Rot4.North ? 0.0014478763f : -0.0014478763f);
 			Graphics.DrawMesh(MeshPool.plane10, location + ZeFlameComp.tankOffset[orientation.AsInt], Quaternion.identity, Assets.tank, 0);
 
 			var flameComp = pawn.equipment?.Primary?.TryGetComp<ZeFlameComp>();
