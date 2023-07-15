@@ -11,7 +11,7 @@ namespace ZeFlammenwerfer
 		public Pawn shooter;
 		public GameObject go;
 		public static readonly int maxRadius = 9;
-		public static readonly Dictionary<IntVec2, BoxCollider> colliders = new Dictionary<IntVec2, BoxCollider>();
+		public static readonly Dictionary<IntVec2, BoxCollider> colliders = new();
 
 		public FlameRadiusDetector(Pawn pawn)
 		{
@@ -34,13 +34,16 @@ namespace ZeFlammenwerfer
 		public void Update(Pawn shooter)
 		{
 			this.shooter = shooter;
-			if (shooter == null) return;
+			if (shooter == null)
+				return;
 			var shooterVec2 = shooter.Position.ToIntVec2;
 
 			var map = shooter.Map;
-			if (map == null) return;
+			if (map == null)
+				return;
 
-			if (shooter.Dead || shooter.Destroyed || shooter.Spawned == false) return;
+			if (shooter.Dead || shooter.Destroyed || shooter.Spawned == false)
+				return;
 
 			var thingGrid = map.thingGrid;
 
@@ -84,7 +87,8 @@ namespace ZeFlammenwerfer
 
 		public bool AffectedByCells(Map map, IEnumerable<IntVec2> vec2s)
 		{
-			if (map != shooter.Map) return false;
+			if (map != shooter.Map)
+				return false;
 			var pos = shooter.Position;
 			var radius = maxRadius * maxRadius;
 			return vec2s.Any(vec2 => pos.DistanceToSquared(vec2.ToIntVec3) <= radius);

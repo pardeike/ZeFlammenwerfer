@@ -19,7 +19,8 @@ namespace ZeFlammenwerfer
 		public void OnParticleCollision(GameObject other)
 		{
 			var particleSystem = other.GetComponent<ParticleSystem>();
-			if (particleSystem == null) return;
+			if (particleSystem == null)
+				return;
 			var launcher = other.GetComponent<ZeOwner>()?.launcher;
 
 			_ = particleSystem.GetCollisionEvents(gameObject, collisionEvents);
@@ -27,7 +28,8 @@ namespace ZeFlammenwerfer
 			{
 				var collider = collision.colliderComponent as Collider;
 				var targetPawn = collider?.gameObject.GetComponent<ColliderHolder.RimWorldPawn>()?.pawn;
-				if (targetPawn == null || targetPawn == launcher) return;
+				if (targetPawn == null || targetPawn == launcher)
+					return;
 
 				var v = collision.velocity;
 				var skill = Mathf.Clamp(launcher?.skills.GetSkill(SkillDefOf.Shooting).Level ?? 1, 0, 20);
@@ -52,11 +54,13 @@ namespace ZeFlammenwerfer
 		{
 			var pawn = flameRadiusDetector?.shooter;
 			var map = pawn?.Map;
-			if (map == null) return;
+			if (map == null)
+				return;
 			var thingGrid = map.thingGrid;
 
 			var particleSystem = other.GetComponent<ParticleSystem>();
-			if (particleSystem == null) return;
+			if (particleSystem == null)
+				return;
 			_ = particleSystem.GetCollisionEvents(gameObject, collisionEvents);
 			foreach (var collision in collisionEvents)
 			{

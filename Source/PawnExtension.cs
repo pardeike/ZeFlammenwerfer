@@ -19,7 +19,7 @@ namespace ZeFlammenwerfer
 	[HarmonyPatch]
 	public static class PawnExtension
 	{
-		public static readonly List<IPawnSubscriber> subscribers = new List<IPawnSubscriber>();
+		public static readonly List<IPawnSubscriber> subscribers = new();
 
 		public static void Subscribe(IPawnSubscriber sub)
 		{

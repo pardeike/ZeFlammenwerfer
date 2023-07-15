@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using Brrainz;
+using HarmonyLib;
 using UnityEngine;
 using Verse;
 
@@ -14,6 +15,8 @@ namespace ZeFlammenwerfer
 
 			var harmony = new Harmony("net.pardeike.ze.flammenwerfer");
 			harmony.PatchAll();
+
+			CrossPromotion.Install(76561197973010050);
 		}
 
 		public override void DoSettingsWindowContents(Rect inRect)

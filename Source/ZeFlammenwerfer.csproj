@@ -1,13 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<ProjectGuid>{30FCD74B-C084-4CA1-8F26-245335AA8B77}</ProjectGuid>
 		<RootNamespace>ZeFlammenwerfer</RootNamespace>
 		<AssemblyName>ZeFlammenwerfer</AssemblyName>
 		<TargetFramework>net472</TargetFramework>
-		<LangVersion>8.0</LangVersion>
+		<LangVersion>latest</LangVersion>
 		<PlatformTarget>x64</PlatformTarget>
-		<OutputPath>..\1.2\Assemblies\</OutputPath>
+		<OutputPath>..\Assemblies\</OutputPath>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 		<Version>1.0.0.0</Version>
@@ -30,21 +30,15 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.2.2905" GeneratePathProperty="true" />
-		<PackageReference Include="Lib.Harmony" Version="2.0.4" ExcludeAssets="runtime" />
-		<PackageReference Include="Microsoft.NETCore.Platforms" Version="5.0.2" />
-		<PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.2">
+		<PackageReference Include="Brrainz.RimWorld.CrossPromotion" Version="1.1.1" />
+		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.4.3704" GeneratePathProperty="true" />
+		<PackageReference Include="Lib.Harmony" Version="2.2.2" ExcludeAssets="runtime" />
+		<PackageReference Include="Microsoft.NETCore.Platforms" Version="7.0.4" />
+		<PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="TaskPubliciser" Version="1.0.3" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Reference Include="BansheeGz">
-	    <HintPath>..\Originals\FlameThrowerUnity\Assets\BansheeGz.dll</HintPath>
-	    <Private>true</Private>
-	  </Reference>
 	</ItemGroup>
 
 	<Target Name="MyCode" BeforeTargets="UpdateReferences">
@@ -81,7 +75,7 @@ if not errorlevel 1 (
 	ModBuilder XMLPut -file "$(MSBuildProjectDirectory)\..\About\Manifest.xml" -xpath /Manifest/version -value "{{$(MSBuildProjectName)-version}}"
 )
 if defined INSTALL_MOD (
-	"%INSTALL_MOD%" "$(Configuration)" "$(MSBuildProjectDirectory)\..\" "$(MSBuildProjectName)" "1.1 1.2 About Defs Resources Sounds Textures" "LoadFolders.xml"
+	"%INSTALL_MOD%" "$(Configuration)" "$(MSBuildProjectDirectory)\..\" "$(MSBuildProjectName)" "About Assemblies Defs Resources Sounds Textures" ""
 )</PostBuildEvent>
 		<Company>Brrainz</Company>
 		<Authors>Andreas Pardeike</Authors>

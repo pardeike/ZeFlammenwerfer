@@ -41,7 +41,8 @@ namespace ZeFlammenwerfer
 
 		public void Start()
 		{
-			if (started) return;
+			if (started)
+				return;
 
 			startEndSource.clip = start;
 			startEndSource.PlayScheduled(AudioSettings.dspTime + 0.25f);
@@ -53,7 +54,8 @@ namespace ZeFlammenwerfer
 
 		public void Stop()
 		{
-			if (started == false) return;
+			if (started == false)
+				return;
 
 			startEndSource.clip = end;
 			startEndSource.Play();

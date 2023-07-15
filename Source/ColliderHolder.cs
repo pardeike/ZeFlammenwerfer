@@ -11,7 +11,7 @@ namespace ZeFlammenwerfer
 			public Pawn pawn;
 		}
 
-		public static readonly Dictionary<Pawn, GameObject> holders = new Dictionary<Pawn, GameObject>();
+		public static readonly Dictionary<Pawn, GameObject> holders = new();
 
 		public static GameObject Add(Pawn pawn)
 		{

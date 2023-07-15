@@ -8,7 +8,7 @@ namespace ZeFlammenwerfer
 {
 	public class PawnShooterTracker : IPawnSubscriber
 	{
-		public static readonly Dictionary<Pawn, FlameRadiusDetector> pawns = new Dictionary<Pawn, FlameRadiusDetector>();
+		public static readonly Dictionary<Pawn, FlameRadiusDetector> pawns = new();
 
 		public void Prepare() { }
 		public void UpdatedCenter(Pawn pawn, Vector3 center) { }
@@ -22,7 +22,8 @@ namespace ZeFlammenwerfer
 
 		public void NewPawn(Pawn pawn)
 		{
-			if (pawn.HasFlameThrower() == false) return;
+			if (pawn.HasFlameThrower() == false)
+				return;
 			var detector = pawns.TryGetValue(pawn);
 			if (detector == null)
 			{

@@ -15,14 +15,20 @@ namespace ZeFlammenwerfer
 		{
 			location = Vector3.negativeInfinity;
 			angle = int.MinValue;
-			CalculateCenter(pawn.Drawer.renderer, pawn.DrawPos);
+			var pawnRenderFlags = pawn.Drawer.renderer.GetDefaultRenderFlags(pawn);
+			pawnRenderFlags |= PawnRenderFlags.Clothes;
+			pawnRenderFlags |= PawnRenderFlags.Headgear;
+			CalculateCenter(pawn.Drawer.renderer, pawn.DrawPos, pawn.Rotation, pawnRenderFlags);
 			return (location, angle);
 		}
 
 		public static bool IsAiming(Pawn pawn)
 		{
 			angle = int.MinValue;
-			CheckIsAiming(pawn.Drawer.renderer, pawn.DrawPos);
+			var pawnRenderFlags = pawn.Drawer.renderer.GetDefaultRenderFlags(pawn);
+			pawnRenderFlags |= PawnRenderFlags.Clothes;
+			pawnRenderFlags |= PawnRenderFlags.Headgear;
+			CheckIsAiming(pawn.Drawer.renderer, pawn.DrawPos, pawn.Rotation, pawnRenderFlags);
 			return angle != int.MinValue;
 		}
 
@@ -42,12 +48,12 @@ namespace ZeFlammenwerfer
 		}
 
 		[HarmonyReversePatch(HarmonyReversePatchType.Original)]
-		[HarmonyPatch(typeof(PawnRenderer), "DrawEquipment")]
-		public static void CalculateCenter(PawnRenderer _1, Vector3 _2)
+		[HarmonyPatch(typeof(PawnRenderer), nameof(PawnRenderer.DrawEquipment))]
+		public static void CalculateCenter(PawnRenderer _1, Vector3 _2, Rot4 _3, PawnRenderFlags _4)
 		{
-			IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
 			{
-				var from = AccessTools.Method(typeof(PawnRenderer), "DrawEquipmentAiming");
+				var from = AccessTools.Method(typeof(PawnRenderer), nameof(PawnRenderer.DrawEquipmentAiming));
 				var to = SymbolExtensions.GetMethodInfo(() => DrawEquipmentAiming(default, default, default, default));
 				return instructions.MethodReplacer(from, to);
 			}
@@ -57,12 +63,12 @@ namespace ZeFlammenwerfer
 		}
 
 		[HarmonyReversePatch(HarmonyReversePatchType.Original)]
-		[HarmonyPatch(typeof(PawnRenderer), "DrawEquipment")]
-		public static void CheckIsAiming(PawnRenderer _1, Vector3 _2)
+		[HarmonyPatch(typeof(PawnRenderer), nameof(PawnRenderer.DrawEquipment))]
+		public static void CheckIsAiming(PawnRenderer _1, Vector3 _2, Rot4 _3, PawnRenderFlags _4)
 		{
-			IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
 			{
-				var from = AccessTools.Method(typeof(PawnRenderer), "DrawEquipmentAiming");
+				var from = AccessTools.Method(typeof(PawnRenderer), nameof(PawnRenderer.DrawEquipmentAiming));
 				var to1 = SymbolExtensions.GetMethodInfo(() => DrawEquipmentAiming(default, default, default, default));
 				var to2 = SymbolExtensions.GetMethodInfo(() => DoNothing(default, default, default, default));
 				var firstTime = true;

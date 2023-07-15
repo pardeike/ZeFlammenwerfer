@@ -24,19 +24,19 @@ namespace ZeFlammenwerfer
 		public GameObject fire;
 		public GameObject smoke;
 		public ZeFlameSound sound;
-		public List<ZeFlame> flames = new List<ZeFlame>();
+		public List<ZeFlame> flames = new();
 		public bool isActive;
 
 		public GameObject curveInner, curveOuter;
-		public BGCurvePointI[] pointsInner, pointsOuter;
+		public IBGCurvePointI[] pointsInner, pointsOuter;
 
-		public static HashSet<ParticleSystem> allParticleSystems = new HashSet<ParticleSystem>();
+		public static HashSet<ParticleSystem> allParticleSystems = new();
 
-		public static readonly Vector3 vSpacer = new Vector3(0, 0.01f, 0);
-		public static readonly Vector3 p1HandleLeft = new Vector3(-0.15f, 0f, -0.08f);
-		public static readonly Vector3 p1HandleRight = new Vector3(0.15f, 0f, -0.08f);
-		public static readonly Vector3 p2HandleLeft = new Vector3(-0.15f, 0f, 0.07f);
-		public static readonly Vector3 p2HandleRight = new Vector3(0.15f, 0f, 0.07f);
+		public static readonly Vector3 vSpacer = new(0, 0.01f, 0);
+		public static readonly Vector3 p1HandleLeft = new(-0.15f, 0f, -0.08f);
+		public static readonly Vector3 p1HandleRight = new(0.15f, 0f, -0.08f);
+		public static readonly Vector3 p2HandleLeft = new(-0.15f, 0f, 0.07f);
+		public static readonly Vector3 p2HandleRight = new(0.15f, 0f, 0.07f);
 
 		public static Vector3[] tankOffset = new[]
 		{
@@ -72,7 +72,8 @@ namespace ZeFlammenwerfer
 
 		public void Create()
 		{
-			if (fire != null) return;
+			if (fire != null)
+				return;
 
 			var maxRange = parent.def.Verbs[0].range;
 			LineRenderer lineRenderer;
@@ -85,6 +86,11 @@ namespace ZeFlammenwerfer
 			smoke.transform.localScale = new Vector3(maxRange, 1, maxRange);
 
 			curveInner = Object.Instantiate(Assets.curveInner);
+
+			var comps = curveInner.GetComponents<Component>();
+			foreach (var comp in comps)
+				Log.Warning($"comp: {comp} [{comp.name} / {comp.GetType().FullName}]");
+
 			curveInner.transform.localScale = new Vector3(1, 1, 1);
 			lineRenderer = curveInner.GetComponent<LineRenderer>();
 			lineRenderer.numCapVertices = 8;
@@ -110,16 +116,21 @@ namespace ZeFlammenwerfer
 
 		public void Remove()
 		{
-			if (fire == null) return;
+			if (fire == null)
+				return;
 
 			_ = allParticleSystems.Remove(fire.GetComponent<ParticleSystem>());
 			_ = allParticleSystems.Remove(smoke.GetComponent<ParticleSystem>());
 
-			Object.DestroyImmediate(fire); fire = null;
-			Object.DestroyImmediate(smoke); smoke = null;
+			Object.DestroyImmediate(fire);
+			fire = null;
+			Object.DestroyImmediate(smoke);
+			smoke = null;
 
-			Object.DestroyImmediate(curveInner); curveInner = null;
-			Object.DestroyImmediate(curveOuter); curveOuter = null;
+			Object.DestroyImmediate(curveInner);
+			curveInner = null;
+			Object.DestroyImmediate(curveOuter);
+			curveOuter = null;
 		}
 
 		public void Update(Vector3 from, Vector3 to)
@@ -137,7 +148,8 @@ namespace ZeFlammenwerfer
 
 		public void UpdateDrawPos(Pawn pawn)
 		{
-			if (pawn == null || fire == null) return;
+			if (pawn == null || fire == null)
+				return;
 
 			var (center, angle) = WeaponTool.GetAimingCenter(pawn);
 			if (angle == int.MinValue)
@@ -179,7 +191,8 @@ namespace ZeFlammenwerfer
 
 		public void SetActive(bool active)
 		{
-			if (isActive == active) return;
+			if (isActive == active)
+				return;
 
 			isActive = active;
 			if (active)

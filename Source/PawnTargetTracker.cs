@@ -26,7 +26,8 @@ namespace ZeFlammenwerfer
 		public void UpdatedCenter(Pawn pawn, Vector3 center)
 		{
 			var go = ColliderHolder.Get(pawn);
-			if (go == null) return;
+			if (go == null)
+				return;
 			center.y = Tools.moteOverheadHeight;
 			go.GetComponent<CapsuleCollider>().center = center;
 		}

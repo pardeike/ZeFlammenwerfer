@@ -36,15 +36,18 @@ namespace ZeFlammenwerfer
 		public static bool BlocksFlamethrower(this Map map, IntVec2 vec2)
 		{
 			var cell = vec2.ToIntVec3;
-			if (cell.InBounds(map) == false) return false;
+			if (cell.InBounds(map) == false)
+				return false;
 			var things = map.thingGrid.ThingsListAt(cell).Where(t => (t as Pawn) == null);
-			if (things.Count() == 0) return false;
+			if (things.Count() == 0)
+				return false;
 			return things.Max(thing => thing.def.fillPercent) >= 0.25f;
 		}
 
 		public static float MaxFillPercent(this IEnumerable<Thing> things)
 		{
-			if (things.Count() == 0) return 0;
+			if (things.Count() == 0)
+				return 0;
 			return things.Max(thing => thing is Pawn ? 0.75f : thing.def.fillPercent);
 		}
 
@@ -55,12 +58,13 @@ namespace ZeFlammenwerfer
 
 		public static void AttachFire(ThingWithComps thing, float amount)
 		{
-			if (!(thing is Pawn pawn) || pawn.RaceProps.IsMechanoid == false)
+			if (thing is not Pawn pawn || pawn.RaceProps.IsMechanoid == false)
 			{
 				thing.TryAttachFire(amount);
 				return;
 			}
-			if (pawn.Destroyed || pawn.HasAttachment(ThingDefOf.Fire)) return;
+			if (pawn.Destroyed || pawn.HasAttachment(ThingDefOf.Fire))
+				return;
 
 			var attachBase = pawn.TryGetComp<CompAttachBase>();
 			if (attachBase != null)
@@ -91,7 +95,8 @@ namespace ZeFlammenwerfer
 
 			var compAttachBase = thing.TryGetComp<CompAttachBase>();
 			var fire = compAttachBase?.attachments?.OfType<Fire>().FirstOrDefault();
-			if (fire != null) d_DoComplexCalcs(fire);
+			if (fire != null)
+				d_DoComplexCalcs(fire);
 		}
 
 		public static void ApplyCellFlame(Map map, float amount, IntVec3 cell, IEnumerable<Thing> things)
@@ -110,7 +115,7 @@ namespace ZeFlammenwerfer
 			}
 		}
 
-		public static BGCurvePointI[] AddPoints(this BGCurve curve)
+		public static IBGCurvePointI[] AddPoints(this BGCurve curve)
 		{
 			var p1 = new BGCurvePoint(curve, Vector3.zero, BGCurvePoint.ControlTypeEnum.BezierIndependant, Vector3.zero, Vector3.zero);
 			var p2 = new BGCurvePoint(curve, Vector3.zero, BGCurvePoint.ControlTypeEnum.BezierIndependant, Vector3.zero, Vector3.zero);

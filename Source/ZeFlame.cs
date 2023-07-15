@@ -44,10 +44,14 @@ namespace ZeFlammenwerfer
 			flameComp.Update(from + startOffset, to);
 		}
 
-		public override void Impact(Thing hitThing)
+		public override void Impact(Thing hitThing, bool blockedByShield = false)
 		{
+			if (blockedByShield) // shield does not block
+				return;
+
 			// do not call base
-			if (flameComp == null) return;
+			if (flameComp == null)
+				return;
 			Destroy(DestroyMode.Vanish);
 			flameComp.SetActive(false);
 			_ = flameComp.flames.Remove(this);
