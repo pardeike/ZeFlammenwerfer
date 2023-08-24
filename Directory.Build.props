@@ -1,0 +1,11 @@
+<Project>
+
+	<PropertyGroup>
+		<ModName>Ze Flammenwerfer</ModName>
+		<ModFileName>ZeFlammenwerfer</ModFileName>
+		<Repository>https://github.com/pardeike/ZeFlammenwerfer</Repository>
+		<ModVersion>1.0.0.0</ModVersion>
+		<ProjectGuid>{30FCD74B-C084-4CA1-8F26-245335AA8B77}</ProjectGuid>
+	</PropertyGroup>
+
+</Project>

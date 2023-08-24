@@ -1,5 +1,5 @@
-﻿using System;
-using BansheeGz.BGSpline.Curve;
+﻿using BansheeGz.BGSpline.Curve;
+using System;
 using UnityEngine;
 
 namespace BansheeGz.BGSpline.Components

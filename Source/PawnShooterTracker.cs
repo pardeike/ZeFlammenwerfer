@@ -1,6 +1,5 @@
 ﻿using HarmonyLib;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using Verse;
 
@@ -8,54 +7,55 @@ namespace ZeFlammenwerfer
 {
 	public class PawnShooterTracker : IPawnSubscriber
 	{
-		public static readonly Dictionary<Pawn, FlameRadiusDetector> pawns = new();
+		public static readonly Dictionary<Pawn, FlameRadiusDetector> trackers = new();
 
 		public void Prepare() { }
 		public void UpdatedCenter(Pawn pawn, Vector3 center) { }
 
 		public void ClearAll()
 		{
-			foreach (var pair in pawns)
+			foreach (var pair in trackers)
 				pair.Value.Cleanup();
-			pawns.Clear();
+			trackers.Clear();
 		}
 
-		public void NewPawn(Pawn pawn)
+		void RegisterPawn(Pawn pawn)
 		{
-			if (pawn.HasFlameThrower() == false)
+			if (pawn.NonHumanlikeOrWildMan() || pawn.HasFlameThrower() == false)
 				return;
-			var detector = pawns.TryGetValue(pawn);
+
+			var detector = trackers.TryGetValue(pawn);
 			if (detector == null)
 			{
 				detector = new FlameRadiusDetector(pawn);
-				pawns[pawn] = detector;
+				trackers[pawn] = detector;
 			}
 			detector.Update(pawn);
 		}
 
-		public void NewPosition(Pawn pawn)
+		void UnregisterPawn(Pawn pawn)
 		{
-			if (pawns.TryGetValue(pawn, out var detector))
-				detector.Update(pawn);
-
-		}
-
-		public void RemovePawn(Pawn pawn)
-		{
-			if (pawns.TryGetValue(pawn, out var detector))
+			if (trackers.TryGetValue(pawn, out var detector))
 			{
 				detector.Cleanup();
-				_ = pawns.Remove(pawn);
+				_ = trackers.Remove(pawn);
 			}
 		}
 
-		// extra
+		public void NewPawn(Pawn pawn) => RegisterPawn(pawn);
+		public void Equipped(Pawn pawn) => RegisterPawn(pawn);
+		public void Unequipped(Pawn pawn) => UnregisterPawn(pawn);
+		public void RemovePawn(Pawn pawn) => UnregisterPawn(pawn);
 
-		public static void RemoveThing(Map map, IEnumerable<IntVec2> vec2s)
+		public void NewPosition(Pawn pawn)
 		{
-			pawns
-				.Where(pair => pair.Value.AffectedByCells(map, vec2s))
-				.Do(pair => pair.Value.Update(pair.Key));
+			if (trackers.TryGetValue(pawn, out var detector))
+				detector.Update(pawn);
+		}
+
+		public static void Update(Map map, IEnumerable<IntVec3> cells)
+		{
+			trackers.DoIf(pair => pair.Value.AffectedByCells(map, cells), pair => pair.Value.Update(pair.Key));
 		}
 	}
 }

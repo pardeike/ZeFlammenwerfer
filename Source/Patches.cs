@@ -1,6 +1,5 @@
 ﻿using HarmonyLib;
 using RimWorld;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,6 +9,17 @@ using Verse;
 
 namespace ZeFlammenwerfer
 {
+	// debug draw
+	[HarmonyPatch(typeof(MapInterface))]
+	[HarmonyPatch(nameof(MapInterface.MapInterfaceUpdate))]
+	class MapInterface_MapInterfaceOnGUI_AfterMainTabs_Patch
+	{
+		static void Postfix()
+		{
+			PawnShooterTracker.trackers.Values.Do(detector => detector.DrawerUpdate());
+		}
+	}
+
 	// remove fire deflect sound (too many when hit with a flamethrower)
 	//
 	[HarmonyPatch(typeof(Effecter), nameof(Effecter.Trigger))]
@@ -61,7 +71,7 @@ namespace ZeFlammenwerfer
 
 		public static void Prefix()
 		{
-			ZeFlameComp.allParticleSystems?.Do(particleSystem => UnityEngine.Object.DestroyImmediate(particleSystem));
+			ZeFlameComp.allParticleSystems?.Do(Object.DestroyImmediate);
 			ZeFlameComp.allParticleSystems = new HashSet<ParticleSystem>();
 		}
 	}
@@ -118,6 +128,7 @@ namespace ZeFlammenwerfer
 		{
 			var flameComp = eq.TryGetComp<ZeFlameComp>();
 			flameComp?.SetActive(false);
+			flameComp?.SetPipeActive(false);
 		}
 	}
 
@@ -241,10 +252,10 @@ namespace ZeFlammenwerfer
 	[HarmonyPatch(typeof(Thing), nameof(Thing.Destroy))]
 	public static class Thing_Destroy_Patch
 	{
-		public class Info
+		public struct Info
 		{
 			public Map map;
-			public IEnumerable<IntVec3> cells;
+			public IntVec3[] cells;
 		}
 
 		public static void Prefix(Thing __instance, out Info __state)
@@ -252,7 +263,7 @@ namespace ZeFlammenwerfer
 			__state = new Info()
 			{
 				map = __instance.Map,
-				cells = __instance.OccupiedRect().Cells
+				cells = __instance.OccupiedRect().Cells.ToArray()
 			};
 		}
 
@@ -263,9 +274,7 @@ namespace ZeFlammenwerfer
 			var map = __state.map;
 			if (map == null)
 				return;
-			var vec2s = __state.cells.Select(cell => cell.ToIntVec2);
-			if (vec2s.Any(vec2 => map.BlocksFlamethrower(vec2)))
-				PawnShooterTracker.RemoveThing(map, vec2s);
+			PawnShooterTracker.Update(map, __state.cells);
 		}
 	}
 
@@ -297,6 +306,8 @@ namespace ZeFlammenwerfer
 		public static void Prefix(Pawn pawn, ref DamageInfo dinfo)
 		{
 			if (pawn.RaceProps.IsMechanoid == false)
+				return;
+			if (dinfo.ignoreInstantKillProtectionInt)
 				return;
 			if (pawn.TryGetComp<FireDamage>() == null)
 				return;

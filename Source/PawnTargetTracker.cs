@@ -7,11 +7,10 @@ namespace ZeFlammenwerfer
 	{
 		public void Prepare() { }
 		public void NewPosition(Pawn pawn) { }
+		public void Equipped(Pawn pawn) { }
+		public void Unequipped(Pawn pawn) { }
 
-		public void ClearAll()
-		{
-			ColliderHolder.ClearAll();
-		}
+		public void ClearAll() => ColliderHolder.ClearAll();
 
 		public void NewPawn(Pawn pawn)
 		{
@@ -32,9 +31,6 @@ namespace ZeFlammenwerfer
 			go.GetComponent<CapsuleCollider>().center = center;
 		}
 
-		public void RemovePawn(Pawn pawn)
-		{
-			ColliderHolder.Remove(pawn);
-		}
+		public void RemovePawn(Pawn pawn) => ColliderHolder.Remove(pawn);
 	}
 }

@@ -33,14 +33,10 @@ namespace ZeFlammenwerfer
 		public static GameObject CreateCurve(Color color, float width, int sections)
 		{
 			var result = new GameObject();
-			Log.Warning($"Obj {result}");
 			var curve = result.AddComponent<BGCurve>();
-			Log.Warning($"curve {curve}");
 			var math = result.AddComponent<BGCcMath>();
-			Log.Warning($"math {math}");
 			result.AddComponent<BGCcVisualizationLineRenderer>();
 			var lineRenderer = result.GetComponent<LineRenderer>();
-			Log.Warning($"lineRenderer {lineRenderer}");
 			lineRenderer.sharedMaterial = SolidColorMaterials.SimpleSolidColorMaterial(color);
 			lineRenderer.startWidth = lineRenderer.endWidth = width;
 			math.SectionParts = sections;

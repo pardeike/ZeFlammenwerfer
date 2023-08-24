@@ -38,7 +38,8 @@ namespace ZeFlammenwerfer
 		public void Update()
 		{
 			var from = launcher.DrawPos.WithHeight(0);
-			var to = destination.WithHeight(0);
+			var job = owner.launcher.CurJob;
+			var to = (job?.targetA != null ? job.targetA.Cell.ToVector3Shifted() : destination).WithHeight(0);
 			var vector = to - from;
 			var startOffset = vector.magnitude > 1f ? vector.normalized : Vector3.zero;
 			flameComp.Update(from + startOffset, to);

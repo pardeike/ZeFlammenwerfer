@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using UnityEngine;
-
-namespace BansheeGz.BGSpline.Curve
+﻿namespace BansheeGz.BGSpline.Curve
 {
 #if UNITY_EDITOR
     // ========================== This class is supposed to work in Editor ONLY

@@ -22,9 +22,9 @@ namespace ZeFlammenwerfer
 			return Path.Combine(root, folder, fileName);
 		}
 
-		public static void Log(string _)
+		public static void Log(string log)
 		{
-			// FileLog.Log(log);
+			_ = log; // FileLog.Log(log);
 		}
 
 		public static Vector3 WithHeight(this Vector3 vector, float height)
@@ -33,22 +33,21 @@ namespace ZeFlammenwerfer
 			return vector;
 		}
 
-		public static bool BlocksFlamethrower(this Map map, IntVec2 vec2)
+		public static float MaxFillPercentFast(this ThingGrid thingGrid, IntVec3 cell)
 		{
-			var cell = vec2.ToIntVec3;
-			if (cell.InBounds(map) == false)
-				return false;
-			var things = map.thingGrid.ThingsListAt(cell).Where(t => (t as Pawn) == null);
-			if (things.Count() == 0)
-				return false;
-			return things.Max(thing => thing.def.fillPercent) >= 0.25f;
-		}
-
-		public static float MaxFillPercent(this IEnumerable<Thing> things)
-		{
-			if (things.Count() == 0)
-				return 0;
-			return things.Max(thing => thing is Pawn ? 0.75f : thing.def.fillPercent);
+			var list = thingGrid.ThingsListAtFast(cell);
+			var max = 0f;
+			for (var i = 0; i < list.Count; i++)
+			{
+				var thing = list[i];
+				if (thing is not Pawn)
+				{
+					var fillPercent = thing.def.fillPercent;
+					if (fillPercent > max)
+						max = fillPercent;
+				}
+			}
+			return max;
 		}
 
 		public static bool HasFlameThrower(this Pawn pawn)

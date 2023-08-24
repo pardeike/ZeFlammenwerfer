@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Verse;
@@ -11,6 +10,8 @@ namespace ZeFlammenwerfer
 		void Prepare();
 		void ClearAll();
 		void NewPawn(Pawn pawn);
+		void Equipped(Pawn pawn);
+		void Unequipped(Pawn pawn);
 		void UpdatedCenter(Pawn pawn, Vector3 center);
 		void NewPosition(Pawn pawn);
 		void RemovePawn(Pawn pawn);
@@ -40,10 +41,26 @@ namespace ZeFlammenwerfer
 		}
 
 		[HarmonyPostfix]
-		[HarmonyPatch(typeof(PawnTweener), MethodType.Constructor, new Type[] { typeof(Pawn) })]
-		public static void Constructor(Pawn pawn)
+		[HarmonyPatch(typeof(Pawn), nameof(Pawn.SpawnSetup))]
+		public static void SpawnSetup(Pawn __instance)
 		{
-			subscribers.ForEach((sub) => sub.NewPawn(pawn));
+			subscribers.ForEach((sub) => sub.NewPawn(__instance));
+		}
+
+		[HarmonyPostfix]
+		[HarmonyPatch(typeof(ThingWithComps), nameof(ThingWithComps.Notify_Equipped))]
+		public static void Notify_Equipped(ThingWithComps __instance, Pawn pawn)
+		{
+			if (__instance.def == Defs.ZeFlammenwerfer)
+				subscribers.ForEach((sub) => sub.Equipped(pawn));
+		}
+
+		[HarmonyPostfix]
+		[HarmonyPatch(typeof(ThingWithComps), nameof(ThingWithComps.Notify_Unequipped))]
+		public static void Notify_Unequipped(Pawn __instance, Pawn pawn)
+		{
+			if (__instance.def == Defs.ZeFlammenwerfer)
+				subscribers.ForEach((sub) => sub.Unequipped(pawn));
 		}
 
 		[HarmonyPostfix]
@@ -68,11 +85,14 @@ namespace ZeFlammenwerfer
 			subscribers.ForEach((sub) => sub.UpdatedCenter(___pawn, ___tweenedPos));
 		}
 
+		[HarmonyPostfix]
 		[HarmonyPatch(typeof(Thing), nameof(Thing.Position), MethodType.Setter)]
 		public static void Position(Thing __instance)
 		{
 			if (__instance is Pawn pawn && pawn.Map != null)
+			{
 				subscribers.ForEach((sub) => sub.NewPosition(pawn));
+			}
 		}
 
 		[HarmonyPostfix]

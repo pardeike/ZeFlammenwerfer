@@ -26,6 +26,7 @@ namespace ZeFlammenwerfer
 		public ZeFlameSound sound;
 		public List<ZeFlame> flames = new();
 		public bool isActive;
+		public bool isPipeActive;
 
 		public GameObject curveInner, curveOuter;
 		public IBGCurvePointI[] pointsInner, pointsOuter;
@@ -86,11 +87,6 @@ namespace ZeFlammenwerfer
 			smoke.transform.localScale = new Vector3(maxRange, 1, maxRange);
 
 			curveInner = Object.Instantiate(Assets.curveInner);
-
-			var comps = curveInner.GetComponents<Component>();
-			foreach (var comp in comps)
-				Log.Warning($"comp: {comp} [{comp.name} / {comp.GetType().FullName}]");
-
 			curveInner.transform.localScale = new Vector3(1, 1, 1);
 			lineRenderer = curveInner.GetComponent<LineRenderer>();
 			lineRenderer.numCapVertices = 8;
@@ -146,6 +142,15 @@ namespace ZeFlammenwerfer
 			smoke.transform.rotation = q;
 		}
 
+		public void SetPipeActive(bool active)
+		{
+			if (isPipeActive == active)
+				return;
+			isPipeActive = active;
+			curveInner.SetActive(active);
+			curveOuter.SetActive(active);
+		}
+
 		public void UpdateDrawPos(Pawn pawn)
 		{
 			if (pawn == null || fire == null)
@@ -154,8 +159,7 @@ namespace ZeFlammenwerfer
 			var (center, angle) = WeaponTool.GetAimingCenter(pawn);
 			if (angle == int.MinValue)
 			{
-				curveInner.SetActive(false);
-				curveOuter.SetActive(false);
+				SetPipeActive(false);
 				return;
 			}
 
@@ -166,8 +170,7 @@ namespace ZeFlammenwerfer
 
 			curveInner.transform.position = drawPos;
 			curveOuter.transform.position = drawPos;
-			curveInner.SetActive(pawn.Rotation != Rot4.North);
-			curveOuter.SetActive(pawn.Rotation != Rot4.North);
+			SetPipeActive(pawn.Rotation != Rot4.North);
 
 			var tankOutputPoint = drawPos + tankOffset[pawn.Rotation.AsInt] + new Vector3(0, 0, 0.25f) + vSpacer;
 			tankOutputPoint.y += PawnRenderer_RenderPawnInternal_Patch.magicOffset + (orientation == Rot4.North ? Altitudes.AltInc : -Altitudes.AltInc / 12f);
@@ -193,8 +196,8 @@ namespace ZeFlammenwerfer
 		{
 			if (isActive == active)
 				return;
-
 			isActive = active;
+
 			if (active)
 				sound.Start();
 			else
