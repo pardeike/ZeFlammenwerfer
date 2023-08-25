@@ -1,37 +1,39 @@
 ﻿using HarmonyLib;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 using Verse;
 
 namespace ZeFlammenwerfer
 {
-	public class FlameRadiusDetector : ICellBoolGiver
+	public class FlameRadiusDetector// : ICellBoolGiver
 	{
 		public Pawn shooter;
 		public GameObject go;
-		public static readonly int maxRadius = 9;
+		public const int maxRadius = 9;
+		public const int maxRadiusSquared = maxRadius * maxRadius;
 		public static readonly Dictionary<IntVec3, BoxCollider> colliders = new();
 
-		public Color color = GenColor.RandomColorOpaque();
-		public CellBoolDrawer currentMapDrawer;
-		public Map currentDrawerMap;
-		public bool currentMapDirty;
+		//public Color color = GenColor.RandomColorOpaque();
+		//public CellBoolDrawer currentMapDrawer;
+		//public Map currentDrawerMap;
+		//public bool currentMapDirty;
 
 		public FlameRadiusDetector(Pawn pawn)
 		{
 			shooter = pawn;
-			color = GenColor.RandomColorOpaque();
+			//color = GenColor.RandomColorOpaque();
 
 			go = new GameObject(pawn.ThingID, typeof(ThingCollisionHandler)) { layer = Renderer.BlockerCullingLevel };
 			go.GetComponent<ThingCollisionHandler>().flameRadiusDetector = this;
 			Object.DontDestroyOnLoad(go);
-			Tools.Log($"SHOO ADD {shooter.ThingID}");
 		}
+
+		//public void SetDirty() => currentMapDirty = true;
 
 		public void Cleanup()
 		{
-			Tools.Log($"SHOO DEL {shooter.ThingID}");
 			Object.Destroy(go);
 			go = null;
 			colliders.Clear();
@@ -41,17 +43,12 @@ namespace ZeFlammenwerfer
 		{
 			if (shooter.HasFlameThrower() == false && colliders.Count > 0)
 			{
-				foreach (var collider in colliders.Values)
-				{
-					Tools.Log($"CELL DEL {collider.name} {collider.center}");
-					Object.Destroy(collider);
-				}
+				foreach (var bc in colliders.Values)
+					Object.Destroy(bc);
 				colliders.Clear();
-				currentMapDirty = true;
+				//currentMapDirty = true;
 				return;
 			}
-
-			Tools.Log($"UPDATE {shooter}");
 
 			this.shooter = shooter;
 			if (shooter == null)
@@ -79,11 +76,9 @@ namespace ZeFlammenwerfer
 			{
 				if (newCells.ContainsKey(cell) == false)
 				{
-					var collider = colliders[cell];
-					Tools.Log($"CELL DEL {collider.name} {collider.center}");
-					Object.Destroy(collider);
+					Object.Destroy(colliders[cell]);
 					_ = colliders.Remove(cell);
-					currentMapDirty = true;
+					//currentMapDirty = true;
 				}
 			});
 			newCells.Do(pair =>
@@ -97,15 +92,13 @@ namespace ZeFlammenwerfer
 					collider.name = $"{cell.x}x{cell.z}";
 					collider.size = new Vector3(f, 5f, f);
 					collider.center = cell.ToVector3ShiftedWithAltitude(Tools.moteOverheadHeight);
-					Tools.Log($"CELL ADD {collider.name} {collider.center} f={f}");
 					colliders[cell] = collider;
-					currentMapDirty = true;
+					//currentMapDirty = true;
 				}
 				else if (collider.size.x != f || collider.size.z != f)
 				{
-					Tools.Log($"CELL SET {collider.name} {collider.center} f={f}");
 					collider.size = new Vector3(f, 5f, f);
-					currentMapDirty = true;
+					//currentMapDirty = true;
 				}
 			});
 		}
@@ -115,46 +108,47 @@ namespace ZeFlammenwerfer
 			if (map != shooter.Map)
 				return false;
 			var pos = shooter.Position;
-			var radius = maxRadius * maxRadius;
-			return cells.Any(cell => pos.DistanceToSquared(cell) <= radius);
+			return cells.Any(cell => pos.DistanceToSquared(cell) <= maxRadiusSquared);
 		}
 
-		public Color Color => color;
-
-		public bool GetCellBool(int index)
-		{
-			if (currentDrawerMap == null || currentDrawerMap.fogGrid.IsFogged(index))
-				return false;
-
-			var map = shooter.Map;
-			if (shooter.Map != currentDrawerMap)
-				return false;
-
-			var cell = map.cellIndices.IndexToCell(index);
-			return colliders.ContainsKey(cell);
-		}
-
-		public Color GetCellExtraColor(int index) => color;
-
-		public void DrawerUpdate()
-		{
-			var map = Find.CurrentMap;
-			if (currentDrawerMap != map)
-			{
-				currentMapDrawer = new CellBoolDrawer(this, map.Size.x, map.Size.z, 3640, 0.5f);
-				currentDrawerMap = map;
-				currentMapDirty = true;
-			}
-
-			//var tickManager = Find.TickManager;
-			if (currentMapDirty/* && (tickManager.TicksGame % 60 == 30 || tickManager.Paused)*/)
-			{
-				currentMapDirty = false;
-				currentMapDrawer.SetDirty();
-			}
-
-			currentMapDrawer.CellBoolDrawerUpdate();
-			currentMapDrawer.MarkForDraw();
-		}
+		//public Color Color => color;
+		//
+		//public bool GetCellBool(int index)
+		//{
+		//	if (currentDrawerMap == null || currentDrawerMap.fogGrid.IsFogged(index))
+		//		return false;
+		//
+		//	var map = shooter.Map;
+		//	var cell = map.cellIndices.IndexToCell(index);
+		//	if (ColliderHolder.holders.Keys.Any(pawn => pawn.Position == cell))
+		//		return true;
+		//
+		//	if (shooter.Map != currentDrawerMap)
+		//		return false;
+		//
+		//	return colliders.ContainsKey(cell);
+		//}
+		//
+		//public Color GetCellExtraColor(int index) => color;
+		//
+		//public void DrawerUpdate()
+		//{
+		//	var map = Find.CurrentMap;
+		//	if (currentDrawerMap != map)
+		//	{
+		//		currentMapDrawer = new CellBoolDrawer(this, map.Size.x, map.Size.z, 3640, 0.5f);
+		//		currentDrawerMap = map;
+		//		currentMapDirty = true;
+		//	}
+		//
+		//	if (currentMapDirty)
+		//	{
+		//		currentMapDirty = false;
+		//		currentMapDrawer.SetDirty();
+		//	}
+		//
+		//	currentMapDrawer.CellBoolDrawerUpdate();
+		//	currentMapDrawer.MarkForDraw();
+		//}
 	}
 }

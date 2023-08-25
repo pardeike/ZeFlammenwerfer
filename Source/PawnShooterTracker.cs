@@ -1,5 +1,7 @@
 ﻿using HarmonyLib;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 using Verse;
 
@@ -10,7 +12,7 @@ namespace ZeFlammenwerfer
 		public static readonly Dictionary<Pawn, FlameRadiusDetector> trackers = new();
 
 		public void Prepare() { }
-		public void UpdatedCenter(Pawn pawn, Vector3 center) { }
+		public void UpdatedDrawPosition(Pawn pawn, Vector3 center) { }
 
 		public void ClearAll()
 		{
@@ -47,7 +49,7 @@ namespace ZeFlammenwerfer
 		public void Unequipped(Pawn pawn) => UnregisterPawn(pawn);
 		public void RemovePawn(Pawn pawn) => UnregisterPawn(pawn);
 
-		public void NewPosition(Pawn pawn)
+		public void UpdateCell(Pawn pawn)
 		{
 			if (trackers.TryGetValue(pawn, out var detector))
 				detector.Update(pawn);
@@ -56,6 +58,18 @@ namespace ZeFlammenwerfer
 		public static void Update(Map map, IEnumerable<IntVec3> cells)
 		{
 			trackers.DoIf(pair => pair.Value.AffectedByCells(map, cells), pair => pair.Value.Update(pair.Key));
+		}
+
+		public static bool InRange(Pawn pawn)
+		{
+			var map = pawn.Map;
+			var position = pawn.drawer.tweener.tweenedPos;
+			return trackers.Keys
+				.AsParallel()
+				.Any(
+					shooter => shooter.Map == map &&
+					(shooter.drawer.tweener.tweenedPos - position).MagnitudeHorizontalSquared() <= FlameRadiusDetector.maxRadiusSquared
+				);
 		}
 	}
 }

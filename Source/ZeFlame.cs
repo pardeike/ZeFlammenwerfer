@@ -1,5 +1,4 @@
-﻿using HarmonyLib;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using Verse;
 
@@ -7,11 +6,8 @@ namespace ZeFlammenwerfer
 {
 	public class ZeFlame : Projectile_Explosive
 	{
-		public delegate bool CarryWeaponOpenly(PawnRenderer renderer);
-
 		public ZeOwner owner;
 		public ZeFlameComp flameComp;
-		public static CarryWeaponOpenly carryWeaponOpenly = AccessTools.MethodDelegate<CarryWeaponOpenly>(AccessTools.Method(typeof(PawnRenderer), "CarryWeaponOpenly"));
 
 		public void Configure(Pawn launcher, ZeFlameComp comp)
 		{

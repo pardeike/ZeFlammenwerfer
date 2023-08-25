@@ -19,24 +19,8 @@ namespace ZeFlammenwerfer
 			CrossPromotion.Install(76561197973010050);
 		}
 
-		public override void DoSettingsWindowContents(Rect inRect)
-		{
-			base.DoSettingsWindowContents(inRect);
-		}
+		public override void DoSettingsWindowContents(Rect inRect) => base.DoSettingsWindowContents(inRect);
 
-		public override string SettingsCategory()
-		{
-			return base.SettingsCategory();
-		}
-
-		public override string ToString()
-		{
-			return base.ToString();
-		}
-
-		public override void WriteSettings()
-		{
-			base.WriteSettings();
-		}
+		public override string SettingsCategory() => base.SettingsCategory();
 	}
 }

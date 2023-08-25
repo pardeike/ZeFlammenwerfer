@@ -2,6 +2,7 @@
 using RimWorld;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 using Verse;
 
@@ -24,8 +25,10 @@ namespace ZeFlammenwerfer
 			var launcher = other.GetComponent<ZeOwner>()?.launcher;
 
 			_ = particleSystem.GetCollisionEvents(gameObject, collisionEvents);
-			foreach (var collision in collisionEvents)
+			var n = collisionEvents.Count;
+			for (var i = 0; i < n; i++)
 			{
+				var collision = collisionEvents[i];
 				var collider = collision.colliderComponent as Collider;
 				var targetPawn = collider?.gameObject.GetComponent<ColliderHolder.RimWorldPawn>()?.pawn;
 				if (targetPawn == null || targetPawn == launcher)
@@ -62,8 +65,10 @@ namespace ZeFlammenwerfer
 			if (particleSystem == null)
 				return;
 			_ = particleSystem.GetCollisionEvents(gameObject, collisionEvents);
-			foreach (var collision in collisionEvents)
+			var n = collisionEvents.Count;
+			for (var i = 0; i < n; i++)
 			{
+				var collision = collisionEvents[i];
 				var v = collision.velocity;
 				var skill = Mathf.Clamp(pawn.skills.GetSkill(SkillDefOf.Shooting).Level, 0, 20);
 				var amount = Mathf.Max(Mathf.Abs(v.x), Mathf.Abs(v.z)) / (21 - skill);

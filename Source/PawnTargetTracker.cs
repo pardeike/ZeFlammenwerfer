@@ -6,7 +6,7 @@ namespace ZeFlammenwerfer
 	public class PawnTargetTracker : IPawnSubscriber
 	{
 		public void Prepare() { }
-		public void NewPosition(Pawn pawn) { }
+		public void UpdateCell(Pawn pawn) { }
 		public void Equipped(Pawn pawn) { }
 		public void Unequipped(Pawn pawn) { }
 
@@ -14,23 +14,21 @@ namespace ZeFlammenwerfer
 
 		public void NewPawn(Pawn pawn)
 		{
-			var collider = ColliderHolder.Add(pawn).GetComponent<CapsuleCollider>();
-			collider.name = pawn.ThingID;
-			collider.direction = 1; // y-axis
-			collider.height = 5f;
-			collider.radius = 0.8f;
-			collider.center = pawn.Position.ToVector3ShiftedWithAltitude(Tools.moteOverheadHeight);
-		}
-
-		public void UpdatedCenter(Pawn pawn, Vector3 center)
-		{
-			var go = ColliderHolder.Get(pawn);
-			if (go == null)
+			if (PawnShooterTracker.InRange(pawn) == false)
 				return;
-			center.y = Tools.moteOverheadHeight;
-			go.GetComponent<CapsuleCollider>().center = center;
+
+			var center = pawn.Position.ToVector3ShiftedWithAltitude(Tools.moteOverheadHeight);
+			ColliderHolder.Register(pawn, center);
 		}
 
-		public void RemovePawn(Pawn pawn) => ColliderHolder.Remove(pawn);
+		public void UpdatedDrawPosition(Pawn pawn, Vector3 center)
+		{
+			if (PawnShooterTracker.InRange(pawn))
+				ColliderHolder.Register(pawn, center);
+			else
+				ColliderHolder.Unregister(pawn);
+		}
+
+		public void RemovePawn(Pawn pawn) => ColliderHolder.Unregister(pawn);
 	}
 }

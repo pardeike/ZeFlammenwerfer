@@ -10,15 +10,15 @@ using Verse;
 namespace ZeFlammenwerfer
 {
 	// debug draw
-	[HarmonyPatch(typeof(MapInterface))]
-	[HarmonyPatch(nameof(MapInterface.MapInterfaceUpdate))]
-	class MapInterface_MapInterfaceOnGUI_AfterMainTabs_Patch
-	{
-		static void Postfix()
-		{
-			PawnShooterTracker.trackers.Values.Do(detector => detector.DrawerUpdate());
-		}
-	}
+	//[HarmonyPatch(typeof(MapInterface))]
+	//[HarmonyPatch(nameof(MapInterface.MapInterfaceUpdate))]
+	//class MapInterface_MapInterfaceOnGUI_AfterMainTabs_Patch
+	//{
+	//	static void Postfix()
+	//	{
+	//		PawnShooterTracker.trackers.Values.Do(detector => detector.DrawerUpdate());
+	//	}
+	//}
 
 	// remove fire deflect sound (too many when hit with a flamethrower)
 	//
@@ -200,15 +200,9 @@ namespace ZeFlammenwerfer
 				if (fireDamageComp != null)
 				{
 					var factor = (thing as Pawn) != null ? factorPawn : factorThing;
-					var newDamage = (int)(damage * factor * fireDamageComp.multiplier);
-
-					Tools.Log($"DAMAGE {thing.ThingID} {damage} x {factor} x {fireDamageComp.multiplier} = {newDamage}");
-					damage = newDamage;
+					damage = (int)(damage * factor * fireDamageComp.multiplier);
 				}
-				else
-					Tools.Log($"DAMAGE {damage} ON {thing} - NO FireDamage");
 			}
-			Tools.Log($"DAMAGE {thing.ThingID} {damage}");
 		}
 
 		public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)

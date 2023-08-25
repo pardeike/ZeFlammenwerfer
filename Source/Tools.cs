@@ -6,25 +6,17 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 using Verse;
-using static HarmonyLib.AccessTools;
 
 namespace ZeFlammenwerfer
 {
 	public static class Tools
 	{
 		public static readonly float moteOverheadHeight = AltitudeLayer.MoteOverheadLow.AltitudeFor();
-		public static readonly FieldRef<ThingWithComps, List<ThingComp>> compsRef = FieldRefAccess<ThingWithComps, List<ThingComp>>("comps");
-		public static readonly Action<Fire> d_DoComplexCalcs = MethodDelegate<Action<Fire>>(Method(typeof(Fire), "DoComplexCalcs"));
 
 		public static string GetAssetsPath(string folder, string fileName)
 		{
 			var root = LoadedModManager.GetMod<ZeFlammenwerferMain>()?.Content.RootDir ?? "";
 			return Path.Combine(root, folder, fileName);
-		}
-
-		public static void Log(string log)
-		{
-			_ = log; // FileLog.Log(log);
 		}
 
 		public static Vector3 WithHeight(this Vector3 vector, float height)
@@ -83,19 +75,16 @@ namespace ZeFlammenwerfer
 			{
 				fireDamageComp = (FireDamage)Activator.CreateInstance(typeof(FireDamage));
 				fireDamageComp.parent = thing;
-				if (compsRef(thing) == null)
-					compsRef(thing) = new List<ThingComp>() { fireDamageComp };
+				if (thing.comps == null)
+					thing.comps = new List<ThingComp>() { fireDamageComp };
 				else
-					compsRef(thing).Add(fireDamageComp);
+					thing.comps.Add(fireDamageComp);
 			}
 
 			AttachFire(thing, amount);
 			fireDamageComp.Increase();
 
-			var compAttachBase = thing.TryGetComp<CompAttachBase>();
-			var fire = compAttachBase?.attachments?.OfType<Fire>().FirstOrDefault();
-			if (fire != null)
-				d_DoComplexCalcs(fire);
+			thing.TryGetComp<CompAttachBase>()?.attachments?.OfType<Fire>().FirstOrDefault()?.DoComplexCalcs();
 		}
 
 		public static void ApplyCellFlame(Map map, float amount, IntVec3 cell, IEnumerable<Thing> things)

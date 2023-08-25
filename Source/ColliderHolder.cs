@@ -13,34 +13,40 @@ namespace ZeFlammenwerfer
 
 		public static readonly Dictionary<Pawn, GameObject> holders = new();
 
-		public static GameObject Add(Pawn pawn)
+		public static void Register(Pawn pawn, Vector3 center)
+		{
+			var go = holders.TryGetValue(pawn);
+			CapsuleCollider collider;
+			if (go != null)
+				collider = go.GetComponent<CapsuleCollider>();
+			else
+			{
+				collider = Add(pawn).GetComponent<CapsuleCollider>();
+				collider.name = pawn.ThingID;
+				collider.direction = 1; // y-axis
+				collider.height = 5f;
+				collider.radius = 0.8f;
+			}
+			center.y = Tools.moteOverheadHeight;
+			collider.center = center;
+			//PawnShooterTracker.trackers.TryGetValue(pawn)?.SetDirty();
+		}
+
+		public static void Unregister(Pawn pawn) => Remove(pawn);
+
+		static GameObject Add(Pawn pawn)
 		{
 			var go = new GameObject(pawn.ThingID, typeof(PawnCollisionHandler), typeof(CapsuleCollider)) { layer = Renderer.BlockerCullingLevel };
 			go.AddComponent<RimWorldPawn>().pawn = pawn;
 			Object.DontDestroyOnLoad(go);
-			if (holders.TryAdd(pawn, go))
-			{
-				Tools.Log($"PAWN ADD {pawn.ThingID}");
-				return go;
-			}
-			else
-			{
-				Tools.Log($"PAWN DUP {pawn.ThingID}");
-				Object.Destroy(go);
-				return Get(pawn);
-			}
+			holders[pawn] = go;
+			return go;
 		}
 
-		public static GameObject Get(Pawn pawn)
-		{
-			return holders.TryGetValue(pawn);
-		}
-
-		public static void Remove(Pawn pawn)
+		static void Remove(Pawn pawn)
 		{
 			if (holders.TryGetValue(pawn, out var holder))
 			{
-				Tools.Log($"PAWN DEL {holder.GetComponent<RimWorldPawn>().pawn.ThingID}");
 				Object.Destroy(holder);
 				_ = holders.Remove(pawn);
 			}
@@ -49,10 +55,7 @@ namespace ZeFlammenwerfer
 		public static void ClearAll()
 		{
 			foreach (var pair in holders)
-			{
-				Tools.Log($"PAWN DEL {pair.Value.GetComponent<RimWorldPawn>().pawn.ThingID}");
 				Object.Destroy(pair.Value);
-			}
 			holders.Clear();
 		}
 	}
