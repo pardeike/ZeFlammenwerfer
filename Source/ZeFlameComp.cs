@@ -6,19 +6,6 @@ using Verse;
 
 namespace ZeFlammenwerfer
 {
-	public class ZeFlameCompProps : CompProperties
-	{
-		public ZeFlameCompProps()
-		{
-			compClass = typeof(ZeFlameComp);
-		}
-	}
-
-	public class ZeOwner : MonoBehaviour
-	{
-		public Pawn launcher;
-	}
-
 	public class ZeFlameComp : ThingComp
 	{
 		public GameObject fire;
@@ -104,7 +91,7 @@ namespace ZeFlammenwerfer
 
 			UpdateDrawPos(parent as Pawn);
 			sound = new ZeFlameSound(fire);
-			SetActive(false);
+			SetActive(false, true);
 
 			_ = allParticleSystems.Add(fire.GetComponent<ParticleSystem>());
 			_ = allParticleSystems.Add(smoke.GetComponent<ParticleSystem>());
@@ -114,6 +101,9 @@ namespace ZeFlammenwerfer
 		{
 			if (fire == null)
 				return;
+
+			sound.Remove();
+			sound = null;
 
 			_ = allParticleSystems.Remove(fire.GetComponent<ParticleSystem>());
 			_ = allParticleSystems.Remove(smoke.GetComponent<ParticleSystem>());
@@ -190,11 +180,9 @@ namespace ZeFlammenwerfer
 			pointsOuter[1].ControlFirstWorld = control;
 		}
 
-		public bool IsActive() => isActive;
-
-		public void SetActive(bool active)
+		public void SetActive(bool active, bool force = false)
 		{
-			if (isActive == active)
+			if (isActive == active && force == false)
 				return;
 			isActive = active;
 
@@ -212,5 +200,18 @@ namespace ZeFlammenwerfer
 			var emission2 = smoke.GetComponent<ParticleSystem>().emission;
 			emission2.enabled = active;
 		}
+	}
+
+	public class ZeFlameCompProps : CompProperties
+	{
+		public ZeFlameCompProps()
+		{
+			compClass = typeof(ZeFlameComp);
+		}
+	}
+
+	public class ZeOwner : MonoBehaviour
+	{
+		public Pawn launcher;
 	}
 }

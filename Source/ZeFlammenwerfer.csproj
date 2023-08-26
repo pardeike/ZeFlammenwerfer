@@ -41,6 +41,12 @@
 		<Content Include="..\Directory.Build.props">
 			<Link>%(Filename)%(Extension)</Link>
 		</Content>
+		<Content Include="..\Defs\**\*.xml">
+			<Link>Defs\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		</Content>
+		<Content Include="..\Languages\**\Keyed\*.xml">
+			<Link>Languages\%(RecursiveDir)%(FileName)%(Extension)</Link>
+		</Content>
 	</ItemGroup>
 
 	<ItemGroup>

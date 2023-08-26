@@ -3,6 +3,7 @@
 
 	<ThingDef ParentName="BaseHumanMakeableGun">
 		<defName>ZeFlammenwerfer</defName>
+		<thingClass>ZeFlammenwerfer.ZeFlammenwerfer</thingClass>
 		<label>Ze Flammenwerfer</label>
 		<description>Dis is ze flammenwerfer</description>
 		<graphicData>
@@ -20,13 +21,44 @@
 			<AccuracyLong>0.01</AccuracyLong>
 			<RangedWeapon_Cooldown>0</RangedWeapon_Cooldown>
 		</statBases>
-		<comps>
-			<li Class="ZeFlammenwerfer.ZeFlameCompProps" />
-		</comps>
+		<recipeMaker>
+			<recipeUsers Inherit="False">
+				<li>FabricationBench</li>
+			</recipeUsers>
+			<researchPrerequisite>GasOperation</researchPrerequisite>
+			<skillRequirements>
+				<Crafting>6</Crafting>
+			</skillRequirements>
+			<displayPriority>100</displayPriority>
+		</recipeMaker>
 		<costList>
 			<Steel>100</Steel>
 			<ComponentIndustrial>6</ComponentIndustrial>
 		</costList>
+		<comps>
+			<li Class="ZeFlammenwerfer.ZeFlameCompProps" />
+			<li Class="CompProperties_Refuelable">
+				<fuelLabel>Chemfuel</fuelLabel>
+				<fuelGizmoLabel>Chemfuel</fuelGizmoLabel>
+				<outOfFuelMessage>Needs chemfuel</outOfFuelMessage>
+				<fuelFilter>
+					<thingDefs>
+						<li>Chemfuel</li>
+					</thingDefs>
+				</fuelFilter>
+				<fuelCapacity>100.0</fuelCapacity>
+				<initialConfigurableTargetFuelLevel>50</initialConfigurableTargetFuelLevel>
+				<fuelConsumptionRate>5</fuelConsumptionRate>
+				<consumeFuelOnlyWhenUsed>true</consumeFuelOnlyWhenUsed>
+				<showFuelGizmo>true</showFuelGizmo>
+				<minimumFueledThreshold>1</minimumFueledThreshold>
+				<factorByDifficulty>true</factorByDifficulty>
+				<showAllowAutoRefuelToggle>true</showAllowAutoRefuelToggle>
+				<targetFuelLevelConfigurable>true</targetFuelLevelConfigurable>
+				<drawOutOfFuelOverlay>false</drawOutOfFuelOverlay>
+				<fuelIconPath>Things/Item/Resource/Chemfuel</fuelIconPath>
+			</li>
+		</comps>
 		<verbs>
 			<li>
 				<verbClass>Verb_Shoot</verbClass>
@@ -42,6 +74,22 @@
 			</li>
 		</verbs>
 		<tools>
+			<li>
+				<label>handle</label>
+				<capacities>
+					<li>Blunt</li>
+				</capacities>
+				<power>3</power>
+				<cooldownTime>2.5</cooldownTime>
+			</li>
+			<li>
+				<label>point</label>
+				<capacities>
+					<li>Stab</li>
+				</capacities>
+				<power>8</power>
+				<cooldownTime>3</cooldownTime>
+			</li>
 		</tools>
 	</ThingDef>
 

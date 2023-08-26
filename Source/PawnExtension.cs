@@ -1,6 +1,5 @@
 ﻿using HarmonyLib;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
 using Verse;
 
@@ -56,7 +55,7 @@ namespace ZeFlammenwerfer
 		[HarmonyPatch(typeof(ThingWithComps), nameof(ThingWithComps.Notify_Equipped))]
 		public static void Notify_Equipped(ThingWithComps __instance, Pawn pawn)
 		{
-			if (__instance.def != Defs.ZeFlammenwerfer)
+			if (pawn == null || __instance.def != Defs.ZeFlammenwerfer)
 				return;
 			var n = subscribers.Count;
 			for (var i = 0; i < n; i++)
@@ -67,7 +66,7 @@ namespace ZeFlammenwerfer
 		[HarmonyPatch(typeof(ThingWithComps), nameof(ThingWithComps.Notify_Unequipped))]
 		public static void Notify_Unequipped(Pawn __instance, Pawn pawn)
 		{
-			if (__instance.def != Defs.ZeFlammenwerfer)
+			if (pawn == null || __instance.def != Defs.ZeFlammenwerfer)
 				return;
 			var n = subscribers.Count;
 			for (var i = 0; i < n; i++)

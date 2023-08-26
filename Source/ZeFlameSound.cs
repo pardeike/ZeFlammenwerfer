@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using Verse;
 
 namespace ZeFlammenwerfer
@@ -6,11 +7,13 @@ namespace ZeFlammenwerfer
 	[StaticConstructorOnStartup]
 	public class ZeFlameSound
 	{
+		public static HashSet<ZeFlameSound> allFlameSounds = new();
+
 		static readonly AudioClip start = ContentFinder<AudioClip>.Get($"Flaming-start");
 		static readonly AudioClip middle = ContentFinder<AudioClip>.Get($"Flaming-middle");
 		static readonly AudioClip end = ContentFinder<AudioClip>.Get($"Flaming-end");
-		readonly AudioSource startEndSource;
-		readonly AudioSource loopSource;
+		AudioSource startEndSource;
+		AudioSource loopSource;
 		bool started;
 
 		public AudioSource Create(GameObject go)
@@ -25,18 +28,29 @@ namespace ZeFlammenwerfer
 		public ZeFlameSound(GameObject fire)
 		{
 			startEndSource = Create(fire);
-			startEndSource.volume = 1;
+			startEndSource.volume = 1f;
 			startEndSource.pitch = 1f;
 			startEndSource.minDistance = 1f;
 			startEndSource.maxDistance = 100f;
 			startEndSource.spatialBlend = 1f;
 			loopSource = Create(fire);
-			loopSource.volume = 1;
+			loopSource.volume = 1f;
 			loopSource.pitch = 1f;
 			loopSource.minDistance = 1f;
 			loopSource.maxDistance = 100f;
 			loopSource.spatialBlend = 1f;
 			loopSource.loop = true;
+			allFlameSounds.Add(this);
+		}
+
+		public void Remove()
+		{
+			allFlameSounds.Remove(this);
+
+			UnityEngine.Object.DestroyImmediate(startEndSource);
+			startEndSource = null;
+			UnityEngine.Object.DestroyImmediate(loopSource);
+			loopSource = null;
 		}
 
 		public void Start()
@@ -62,6 +76,21 @@ namespace ZeFlammenwerfer
 			loopSource.Stop();
 
 			started = false;
+		}
+
+		public void SetPause(bool paused)
+		{
+			if (paused)
+			{
+				startEndSource.Pause();
+				loopSource.Pause();
+			}
+			else
+			{
+				startEndSource.UnPause();
+				loopSource.UnPause();
+			}
+
 		}
 	}
 }

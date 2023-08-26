@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using UnityEngine;
 using Verse;
 
 namespace ZeFlammenwerfer
@@ -14,7 +13,6 @@ namespace ZeFlammenwerfer
 			flameComp = comp;
 			owner = flameComp.fire.GetComponent<ZeOwner>();
 			owner.launcher = launcher;
-			Update();
 			flameComp.SetActive(true);
 			flameComp.flames.Insert(0, this);
 		}
@@ -22,23 +20,6 @@ namespace ZeFlammenwerfer
 		public override void ExposeData()
 		{
 			base.ExposeData();
-		}
-
-		public override void Tick()
-		{
-			base.Tick();
-			if (flameComp != null)
-				Update();
-		}
-
-		public void Update()
-		{
-			var from = launcher.DrawPos.WithHeight(0);
-			var job = owner.launcher.CurJob;
-			var to = (job?.targetA != null ? job.targetA.Cell.ToVector3Shifted() : destination).WithHeight(0);
-			var vector = to - from;
-			var startOffset = vector.magnitude > 1f ? vector.normalized : Vector3.zero;
-			flameComp.Update(from + startOffset, to);
 		}
 
 		public override void Impact(Thing hitThing, bool blockedByShield = false)
@@ -52,6 +33,7 @@ namespace ZeFlammenwerfer
 			Destroy(DestroyMode.Vanish);
 			flameComp.SetActive(false);
 			_ = flameComp.flames.Remove(this);
+			flameComp = null;
 		}
 
 		public override void Draw() { }

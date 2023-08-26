@@ -31,6 +31,19 @@ namespace ZeFlammenwerfer
 		}
 	}
 
+	// tick flamethrowers (weapons don't tick per default)
+	//
+	[HarmonyPatch(typeof(Pawn_EquipmentTracker))]
+	[HarmonyPatch(nameof(Pawn_EquipmentTracker.EquipmentTrackerTick))]
+	static class Pawn_EquipmentTracker_EquipmentTrackerTick_Patch
+	{
+		static void Postfix(Pawn ___pawn)
+		{
+			if (___pawn.equipment?.Primary is ZeFlammenwerfer flamethrower)
+				flamethrower.Tick();
+		}
+	}
+
 	// draw tank and pipe
 	//
 	[HarmonyPatch(typeof(PawnRenderer), nameof(PawnRenderer.DrawDynamicParts))]
@@ -76,6 +89,32 @@ namespace ZeFlammenwerfer
 		}
 	}
 
+	// show fuel level when flamethrower is equipped
+	//
+	[HarmonyPatch]
+	static class Pawn_EquipmentTracker_YieldGizmos_Patch
+	{
+		public static MethodBase TargetMethod()
+		{
+			return AccessTools.FirstMethod(typeof(Pawn_EquipmentTracker), mi =>
+			{
+				if (mi.GetParameters().Length < 1)
+					return false;
+				if (mi.GetParameters()[0].ParameterType != typeof(ThingWithComps))
+					return false;
+				return mi.Name.Contains("__YieldGizmos");
+			});
+		}
+
+		public static IEnumerable<Gizmo> Postfix(IEnumerable<Gizmo> gizmos, ThingWithComps eq)
+		{
+			if (eq is ZeFlammenwerfer flamethrower && flamethrower.pawn != null)
+				yield return new Gizmo_RefuelableFuelStatus { refuelable = flamethrower.refuelable };
+			foreach (var gizmo in gizmos)
+				yield return gizmo;
+		}
+	}
+
 	// start/stop flamethrowers when game is paused/resumed
 	//
 	[HarmonyPatch]
@@ -93,6 +132,7 @@ namespace ZeFlammenwerfer
 				return;
 			var paused = __instance.Paused;
 
+			ZeFlameSound.allFlameSounds.Do(sound => sound.SetPause(paused));
 			ZeFlameComp.allParticleSystems.Where(ps => ps.isPaused != paused).Do(particleSystem =>
 			{
 				if (paused)
@@ -100,22 +140,6 @@ namespace ZeFlammenwerfer
 				else
 					particleSystem.Play(true);
 			});
-		}
-	}
-
-	// stop flamethrower when in non-aiming stance
-	//
-	[HarmonyPatch(typeof(ThingWithComps), nameof(ThingWithComps.Tick))]
-	public static class ThingWithComps_Tick_Patch
-	{
-		public static void Postfix(ThingWithComps __instance)
-		{
-			var pawn = __instance as Pawn;
-			var flameComp = pawn?.equipment?.Primary?.TryGetComp<ZeFlameComp>();
-			if (flameComp == null)
-				return;
-			if (WeaponTool.IsAiming(pawn) == false && flameComp.isActive)
-				flameComp.SetActive(false);
 		}
 	}
 
