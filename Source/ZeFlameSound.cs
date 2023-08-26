@@ -80,6 +80,9 @@ namespace ZeFlammenwerfer
 
 		public void SetPause(bool paused)
 		{
+			if (started == false)
+				return;
+
 			if (paused)
 			{
 				startEndSource.Pause();
