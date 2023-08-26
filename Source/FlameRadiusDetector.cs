@@ -40,6 +40,8 @@ namespace ZeFlammenwerfer
 
 		public void Update(Pawn shooter)
 		{
+			if (shooter == null)
+				return;
 			if (shooter.HasFlameThrower() == false && colliders.Count > 0)
 			{
 				foreach (var bc in colliders.Values)

@@ -85,10 +85,12 @@ namespace ZeFlammenwerfer
 					subscribers[i].UpdateCell(pawns[j]);
 		}
 
-		[HarmonyPostfix]
+		[HarmonyPrefix]
 		[HarmonyPatch(typeof(Thing), nameof(Thing.Position), MethodType.Setter)]
-		public static void Position(Thing __instance)
+		public static void Position(Thing __instance, IntVec3 value)
 		{
+			if (value == __instance.positionInt)
+				return;
 			if (__instance is not Pawn pawn || pawn.Map == null)
 				return;
 			var n = subscribers.Count;

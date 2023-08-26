@@ -1,5 +1,4 @@
-﻿using HarmonyLib;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Verse;
@@ -56,7 +55,14 @@ namespace ZeFlammenwerfer
 
 		public static void Update(Map map, IEnumerable<IntVec3> cells)
 		{
-			trackers.DoIf(pair => pair.Value.AffectedByCells(map, cells), pair => pair.Value.Update(pair.Key));
+			if (trackers == null)
+				return;
+			foreach (var tracker in trackers)
+			{
+				var detector = tracker.Value;
+				if (detector?.AffectedByCells(map, cells) ?? false)
+					detector.Update(tracker.Key);
+			}
 		}
 
 		public static bool InRange(Pawn pawn)

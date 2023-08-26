@@ -20,7 +20,7 @@ namespace ZeFlammenwerfer
 		public override void Tick()
 		{
 			base.Tick();
-			if (flameComp.isActive && WeaponTool.IsAiming(pawn) == false)
+			if (pawn == null || (flameComp.isActive && WeaponTool.IsAiming(pawn) == false))
 			{
 				flameComp.SetActive(false);
 				return;
