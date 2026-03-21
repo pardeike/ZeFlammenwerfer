@@ -1,4 +1,5 @@
-﻿using BansheeGz.BGSpline.Components;
+﻿using System;
+using BansheeGz.BGSpline.Components;
 using BansheeGz.BGSpline.Curve;
 using RimWorld;
 using System.IO;
@@ -10,6 +11,8 @@ namespace ZeFlammenwerfer
 	[StaticConstructorOnStartup]
 	public static class Assets
 	{
+		const string AssetBundleBaseName = "flamethrower";
+
 		public static readonly Color lineForeground = new(137f / 255f, 44f / 255f, 31f / 255f);
 		public static readonly Color lineBackground = Color.black;
 
@@ -23,11 +26,11 @@ namespace ZeFlammenwerfer
 
 		static Assets()
 		{
-			Object.DontDestroyOnLoad(fire);
-			Object.DontDestroyOnLoad(smoke);
-			Object.DontDestroyOnLoad(curveInner);
-			Object.DontDestroyOnLoad(curveOuter);
-			Object.DontDestroyOnLoad(blockCube);
+			UnityEngine.Object.DontDestroyOnLoad(fire);
+			UnityEngine.Object.DontDestroyOnLoad(smoke);
+			UnityEngine.Object.DontDestroyOnLoad(curveInner);
+			UnityEngine.Object.DontDestroyOnLoad(curveOuter);
+			UnityEngine.Object.DontDestroyOnLoad(blockCube);
 		}
 
 		public static GameObject CreateCurve(Color color, float width, int sections)
@@ -53,8 +56,56 @@ namespace ZeFlammenwerfer
 
 		public static AssetBundle LoadAssetBundle()
 		{
-			var path = Path.Combine(GetModRootDirectory(), "Resources", "flamethrower");
-			return AssetBundle.LoadFromFile(path);
+			var resourcesDirectory = Path.Combine(GetModRootDirectory(), "Resources");
+			var candidateBundleNames = GetCandidateBundleNames();
+
+			for (var i = 0; i < candidateBundleNames.Length; i++)
+			{
+				var bundleName = candidateBundleNames[i];
+				var path = Path.Combine(resourcesDirectory, bundleName);
+				if (File.Exists(path) == false)
+					continue;
+
+				var bundle = AssetBundle.LoadFromFile(path);
+				if (bundle != null)
+				{
+					if (i > 0)
+						Log.Warning($"Loaded legacy asset bundle '{bundleName}'. Build platform-specific bundles to avoid cross-platform asset issues.");
+					return bundle;
+				}
+
+				Log.Error($"Failed to load asset bundle at '{path}'.");
+			}
+
+			throw new FileNotFoundException(
+				$"No compatible asset bundle found for platform {Application.platform}. Tried: {string.Join(", ", Array.ConvertAll(candidateBundleNames, name => Path.Combine(resourcesDirectory, name)))}");
+		}
+
+		static string[] GetCandidateBundleNames()
+		{
+			var platformBundleName = GetPlatformBundleName(Application.platform);
+			if (platformBundleName == AssetBundleBaseName)
+				return new[] { AssetBundleBaseName };
+
+			return new[] { platformBundleName, AssetBundleBaseName };
+		}
+
+		static string GetPlatformBundleName(RuntimePlatform platform)
+		{
+			switch (platform)
+			{
+				case RuntimePlatform.OSXEditor:
+				case RuntimePlatform.OSXPlayer:
+					return $"{AssetBundleBaseName}-mac";
+				case RuntimePlatform.WindowsEditor:
+				case RuntimePlatform.WindowsPlayer:
+					return $"{AssetBundleBaseName}-win";
+				case RuntimePlatform.LinuxEditor:
+				case RuntimePlatform.LinuxPlayer:
+					return $"{AssetBundleBaseName}-linux";
+				default:
+					return AssetBundleBaseName;
+			}
 		}
 	}
 
