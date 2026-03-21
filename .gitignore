@@ -6,6 +6,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+.DS_Store
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -49,6 +50,22 @@ artifacts/
 *_i.h
 *.ilk
 *.meta
+
+# Unity asset GUIDs must be versioned for these Unity project copies.
+!Originals/FlameThrowerUnity*/**/*.meta
+!Originals/FlameThrowerUnity*/Packages/
+!Originals/FlameThrowerUnity*/Packages/*.json
+Originals/FlameThrowerUnity*/.vscode/
+Originals/FlameThrowerUnity*/.vsconfig
+Originals/FlameThrowerUnity*/*.sln
+Originals/FlameThrowerUnity*/*.csproj
+Originals/FlameThrowerUnity*/Assets/AssetBundles.meta
+Originals/FlameThrowerUnity*/Assets/AssetBundles/
+Originals/FlameThrowerUnity*/Library/
+Originals/FlameThrowerUnity*/Temp/
+Originals/FlameThrowerUnity*/Logs/
+Originals/FlameThrowerUnity*/UserSettings/
+Originals/FlameThrowerUnity_2022BuildProbe_*/
 *.obj
 *.pch
 *.pdb
@@ -150,6 +167,8 @@ publish/
 *.nupkg
 # The packages folder can be ignored because of Package Restore
 **/packages/*
+!Originals/FlameThrowerUnity*/Packages/
+!Originals/FlameThrowerUnity*/Packages/*.json
 # except build/, which is used as an MSBuild target.
 !**/packages/build/
 # Uncomment if necessary however generally it will be regenerated when needed

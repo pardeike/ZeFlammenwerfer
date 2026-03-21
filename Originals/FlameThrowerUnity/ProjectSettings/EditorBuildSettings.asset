@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/FlameThrower.unity
+    guid: 401ac1cb9139a48fca921b9582e09ec7
   m_configObjects: {}
