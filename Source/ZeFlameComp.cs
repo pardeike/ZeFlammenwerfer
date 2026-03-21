@@ -1,6 +1,7 @@
 ﻿using BansheeGz.BGSpline.Curve;
 using HarmonyLib;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Verse;
 
@@ -10,6 +11,7 @@ namespace ZeFlammenwerfer
 	{
 		const int activeGraceTicks = 120;
 
+		public static HashSet<ZeFlameComp> allFlameComps = new();
 		public GameObject fire;
 		public GameObject smoke;
 		public ZeFlameSound sound;
@@ -17,6 +19,7 @@ namespace ZeFlammenwerfer
 		public bool isActive;
 		public bool isPipeActive;
 		public int lastShotTick = int.MinValue;
+		bool renderVisible = true;
 
 		public GameObject curveInner, curveOuter;
 		public IBGCurvePointI[] pointsInner, pointsOuter;
@@ -61,6 +64,26 @@ namespace ZeFlammenwerfer
 			Remove();
 		}
 
+		public static void ClearAllVisuals()
+		{
+			foreach (var flameComp in allFlameComps.ToArray())
+				flameComp.Remove();
+
+			allFlameComps.Clear();
+			allParticleSystems = new HashSet<ParticleSystem>();
+		}
+
+		public static void RefreshRenderedMap(Map renderedMap, bool force = false)
+		{
+			foreach (var flameComp in allFlameComps.ToArray())
+			{
+				if (flameComp == null)
+					continue;
+
+				flameComp.SetRenderVisible(flameComp.RenderMap == renderedMap, force);
+			}
+		}
+
 		public void Create()
 		{
 			if (fire != null)
@@ -98,8 +121,11 @@ namespace ZeFlammenwerfer
 			smoke.GetComponent<ParticleSystem>()?.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 			SetActive(false, true);
 
+			_ = allFlameComps.Add(this);
 			_ = allParticleSystems.Add(fire.GetComponent<ParticleSystem>());
 			_ = allParticleSystems.Add(smoke.GetComponent<ParticleSystem>());
+			renderVisible = MapRenderState.ShouldRenderMap(RenderMap);
+			ApplyRenderState(true);
 		}
 
 		public void Remove()
@@ -107,21 +133,42 @@ namespace ZeFlammenwerfer
 			if (fire == null)
 				return;
 
-			sound.Remove();
+			_ = allFlameComps.Remove(this);
+			flames.DoIf(f => f.Destroyed == false, f => f.Destroy(DestroyMode.Vanish));
+			flames.Clear();
+
+			fire.GetComponent<ParticleSystem>()?.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+			smoke.GetComponent<ParticleSystem>()?.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+			sound?.Remove();
 			sound = null;
 
 			_ = allParticleSystems.Remove(fire.GetComponent<ParticleSystem>());
 			_ = allParticleSystems.Remove(smoke.GetComponent<ParticleSystem>());
 
-			Object.DestroyImmediate(fire);
+			fire.SetActive(false);
+			DestroyUnityObject(fire);
 			fire = null;
-			Object.DestroyImmediate(smoke);
+			smoke?.SetActive(false);
+			DestroyUnityObject(smoke);
 			smoke = null;
 
-			Object.DestroyImmediate(curveInner);
+			curveInner?.SetActive(false);
+			DestroyUnityObject(curveInner);
 			curveInner = null;
-			Object.DestroyImmediate(curveOuter);
+			curveOuter?.SetActive(false);
+			DestroyUnityObject(curveOuter);
 			curveOuter = null;
+		}
+
+		static void DestroyUnityObject(Object obj)
+		{
+			if (obj == null)
+				return;
+
+			if (Application.isPlaying)
+				Object.Destroy(obj);
+			else
+				Object.DestroyImmediate(obj);
 		}
 
 		public void Update(Vector3 from, Vector3 to)
@@ -142,8 +189,7 @@ namespace ZeFlammenwerfer
 			if (isPipeActive == active)
 				return;
 			isPipeActive = active;
-			curveInner.SetActive(active);
-			curveOuter.SetActive(active);
+			ApplyRenderState(true);
 		}
 
 		public void UpdateDrawPos(Pawn pawn)
@@ -223,7 +269,73 @@ namespace ZeFlammenwerfer
 				smokeParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
 			}
 
+			ApplyRenderState(true);
 			DebugTrace.Log($"SetActive(active={active}, force={force}) flames={flames.Count} firePlaying={fireParticleSystem.isPlaying} firePaused={fireParticleSystem.isPaused} fireStopped={fireParticleSystem.isStopped} smokePlaying={smokeParticleSystem.isPlaying} smokePaused={smokeParticleSystem.isPaused} smokeStopped={smokeParticleSystem.isStopped}");
+		}
+
+		public void SetRenderVisible(bool visible, bool force = false)
+		{
+			if (force == false && renderVisible == visible)
+				return;
+
+			renderVisible = visible;
+			ApplyRenderState(true);
+		}
+
+		Map RenderMap => parent?.MapHeld ?? (parent as ZeFlammenwerfer)?.pawn?.Map;
+
+		void ApplyRenderState(bool force = false)
+		{
+			if (fire == null || smoke == null || curveInner == null || curveOuter == null)
+				return;
+
+			var fireParticleSystem = fire.GetComponent<ParticleSystem>();
+			var smokeParticleSystem = smoke.GetComponent<ParticleSystem>();
+			if (fireParticleSystem == null || smokeParticleSystem == null)
+				return;
+
+			if (renderVisible == false)
+			{
+				sound?.SetPause(true);
+				fireParticleSystem.Pause(true);
+				smokeParticleSystem.Pause(true);
+				if (force || fire.activeSelf)
+					fire.SetActive(false);
+				if (force || smoke.activeSelf)
+					smoke.SetActive(false);
+				if (force || curveInner.activeSelf)
+					curveInner.SetActive(false);
+				if (force || curveOuter.activeSelf)
+					curveOuter.SetActive(false);
+				return;
+			}
+
+			if (force || fire.activeSelf == false)
+				fire.SetActive(true);
+			if (force || smoke.activeSelf == false)
+				smoke.SetActive(true);
+
+			var showPipe = isPipeActive;
+			if (force || curveInner.activeSelf != showPipe)
+				curveInner.SetActive(showPipe);
+			if (force || curveOuter.activeSelf != showPipe)
+				curveOuter.SetActive(showPipe);
+
+			if (isActive == false)
+				return;
+
+			var paused = Current.Game?.tickManager?.Paused ?? false;
+			if (paused)
+			{
+				sound?.SetPause(true);
+				fireParticleSystem.Pause(true);
+				smokeParticleSystem.Pause(true);
+				return;
+			}
+
+			fireParticleSystem.Play(true);
+			smokeParticleSystem.Play(true);
+			sound?.SetPause(false);
 		}
 	}
 

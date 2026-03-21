@@ -13,6 +13,7 @@ namespace ZeFlammenwerfer
 		public const int maxRadius = 9;
 		public const int maxRadiusSquared = maxRadius * maxRadius;
 		public readonly Dictionary<IntVec3, BoxCollider> colliders = new();
+		bool renderVisible = true;
 
 		//public Color color = GenColor.RandomColorOpaque();
 		//public CellBoolDrawer currentMapDrawer;
@@ -27,6 +28,7 @@ namespace ZeFlammenwerfer
 			go = new GameObject(pawn.ThingID, typeof(ThingCollisionHandler)) { layer = Renderer.BlockerCullingLevel };
 			go.GetComponent<ThingCollisionHandler>().flameRadiusDetector = this;
 			Object.DontDestroyOnLoad(go);
+			SetRenderVisible(MapRenderState.ShouldRenderMap(pawn?.Map));
 		}
 
 		//public void SetDirty() => currentMapDirty = true;
@@ -36,6 +38,17 @@ namespace ZeFlammenwerfer
 			Object.Destroy(go);
 			go = null;
 			colliders.Clear();
+		}
+
+		public void SetRenderVisible(bool visible)
+		{
+			if (go == null || renderVisible == visible)
+				return;
+
+			renderVisible = visible;
+			go.SetActive(visible);
+			if (visible)
+				Update(shooter);
 		}
 
 		public void Update(Pawn shooter)

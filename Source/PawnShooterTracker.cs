@@ -65,6 +65,12 @@ namespace ZeFlammenwerfer
 			}
 		}
 
+		public static void RefreshRenderedMap(Map renderedMap)
+		{
+			foreach (var tracker in trackers.Values.ToArray())
+				tracker?.SetRenderVisible(tracker?.shooter?.Map == renderedMap);
+		}
+
 		public static bool InRange(Pawn pawn)
 		{
 			var map = pawn.Map;

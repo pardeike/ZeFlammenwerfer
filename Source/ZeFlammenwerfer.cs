@@ -17,6 +17,7 @@ namespace ZeFlammenwerfer
 		int manualWarmupUntilTick = int.MinValue;
 		int nextManualShotTick = int.MinValue;
 		bool manualTargetRepathPending;
+		bool restoreVisualAfterLoadPending;
 
 		public Pawn pawn;
 
@@ -39,6 +40,7 @@ namespace ZeFlammenwerfer
 		public override void Tick()
 		{
 			base.Tick();
+			TryRestoreVisualAfterLoad();
 			if (CanFireNow == false)
 			{
 				ClearManualTarget();
@@ -83,15 +85,19 @@ namespace ZeFlammenwerfer
 		public override void ExposeData()
 		{
 			base.ExposeData();
+			if (Scribe.mode == LoadSaveMode.Saving)
+				restoreVisualAfterLoadPending = flameComp?.isActive == true && CanFireNow;
 			Scribe_References.Look(ref pawn, "pawn");
 			Scribe_TargetInfo.Look(ref manualTarget, "manualTarget");
 			Scribe_Values.Look(ref manualWarmupUntilTick, "manualWarmupUntilTick", int.MinValue);
 			Scribe_Values.Look(ref nextManualShotTick, "nextManualShotTick", int.MinValue);
 			Scribe_Values.Look(ref manualTargetRepathPending, "manualTargetRepathPending", false);
+			Scribe_Values.Look(ref restoreVisualAfterLoadPending, "restoreVisualAfterLoadPending", false);
 			if (Scribe.mode == LoadSaveMode.PostLoadInit)
 			{
 				Setup();
 				manualTargetRepathPending |= manualTarget.IsValid;
+				TryRestoreVisualAfterLoad();
 			}
 		}
 
@@ -113,6 +119,8 @@ namespace ZeFlammenwerfer
 		{
 			base.SpawnSetup(map, respawningAfterLoad);
 			Setup();
+			if (respawningAfterLoad)
+				TryRestoreVisualAfterLoad();
 		}
 
 		public override void Notify_Equipped(Pawn pawn)
@@ -291,6 +299,61 @@ namespace ZeFlammenwerfer
 			if (TryForceCurrentMoveRepath() == false)
 				return;
 			manualTargetRepathPending = false;
+		}
+
+		void TryRestoreVisualAfterLoad()
+		{
+			if (restoreVisualAfterLoadPending == false)
+				return;
+			if (CanFireNow == false || pawn == null || flameComp == null)
+			{
+				restoreVisualAfterLoadPending = false;
+				return;
+			}
+			if (pawn.Spawned == false || pawn.Map == null)
+				return;
+
+			var visualTarget = CurrentAimTarget;
+			if (visualTarget.IsValid == false)
+				visualTarget = BuildFallbackVisualTarget();
+
+			if (visualTarget.IsValid == false)
+			{
+				restoreVisualAfterLoadPending = false;
+				return;
+			}
+
+			flameComp.NotifyShot();
+			flameComp.SetActive(true, true);
+			flameComp.UpdateDrawPos(pawn);
+
+			var from = pawn.DrawPos.WithHeight(0);
+			var to = visualTarget.HasThing ? visualTarget.Thing.DrawPos : visualTarget.Cell.ToVector3Shifted();
+			var vector = to - from;
+			var startOffset = vector.magnitude > 1f ? vector.normalized : Vector3.zero;
+			flameComp.Update(from + 1.75f * startOffset, to);
+
+			if (CurrentAimTarget.IsValid)
+				FlameDangerTracker.Update(pawn, CurrentAimTarget);
+			else
+				FlameDangerTracker.Clear(pawn);
+
+			restoreVisualAfterLoadPending = false;
+		}
+
+		LocalTargetInfo BuildFallbackVisualTarget()
+		{
+			if (pawn?.Map == null)
+				return LocalTargetInfo.Invalid;
+
+			var direction = pawn.Rotation.FacingCell;
+			if (direction.IsValid == false)
+				return LocalTargetInfo.Invalid;
+
+			var fallbackCell = pawn.Position + direction * 6;
+			if (fallbackCell.InBounds(pawn.Map) == false)
+				fallbackCell = CellRect.WholeMap(pawn.Map).ClosestCellTo(fallbackCell);
+			return fallbackCell.InBounds(pawn.Map) ? new LocalTargetInfo(fallbackCell) : LocalTargetInfo.Invalid;
 		}
 	}
 }

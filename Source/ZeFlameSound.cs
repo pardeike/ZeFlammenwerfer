@@ -49,11 +49,30 @@ namespace ZeFlammenwerfer
 			started = false;
 
 			if (startEndSource != null)
-				UnityEngine.Object.DestroyImmediate(startEndSource);
+			{
+				startEndSource.Stop();
+				startEndSource.clip = null;
+				DestroyUnityObject(startEndSource);
+			}
 			startEndSource = null;
 			if (loopSource != null)
-				UnityEngine.Object.DestroyImmediate(loopSource);
+			{
+				loopSource.Stop();
+				loopSource.clip = null;
+				DestroyUnityObject(loopSource);
+			}
 			loopSource = null;
+		}
+
+		static void DestroyUnityObject(Object obj)
+		{
+			if (obj == null)
+				return;
+
+			if (Application.isPlaying)
+				UnityEngine.Object.Destroy(obj);
+			else
+				UnityEngine.Object.DestroyImmediate(obj);
 		}
 
 		public void Start()

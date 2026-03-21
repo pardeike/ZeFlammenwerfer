@@ -89,8 +89,8 @@ namespace ZeFlammenwerfer
 
 		public static void Prefix()
 		{
-			ZeFlameComp.allParticleSystems?.Do(Object.DestroyImmediate);
-			ZeFlameComp.allParticleSystems = new HashSet<ParticleSystem>();
+			MapRenderState.Invalidate();
+			ZeFlameComp.ClearAllVisuals();
 			FlameDangerTracker.ClearAll();
 		}
 	}
@@ -137,18 +137,61 @@ namespace ZeFlammenwerfer
 
 		public static void Postfix(TickManager __instance)
 		{
-			if (__instance == null || Current.Game == null)
-				return;
-			var paused = __instance.Paused;
+			MapRenderState.Refresh(force: true);
+		}
+	}
 
-			ZeFlameSound.allFlameSounds.Where(sound => sound != null).Do(sound => sound.SetPause(paused));
-			ZeFlameComp.allParticleSystems.Where(ps => ps != null && ps.isPaused != paused).Do(particleSystem =>
-			{
-				if (paused)
-					particleSystem.Pause(true);
-				else
-					particleSystem.Play(true);
-			});
+	[HarmonyPatch(typeof(UIRoot_Play), nameof(UIRoot_Play.UIRootUpdate))]
+	public static class UIRoot_Play_UIRootUpdate_Patch
+	{
+		public static void Postfix()
+		{
+			MapRenderState.Refresh();
+		}
+	}
+
+	[HarmonyPatch(typeof(MapInterface), nameof(MapInterface.Notify_SwitchedMap))]
+	public static class MapInterface_Notify_SwitchedMap_Patch
+	{
+		public static void Postfix()
+		{
+			MapRenderState.Refresh(force: true);
+		}
+	}
+
+	[HarmonyPatch(typeof(Current), nameof(Current.Notify_LoadedSceneChanged))]
+	public static class Current_Notify_LoadedSceneChanged_Patch
+	{
+		public static void Postfix()
+		{
+			MapRenderState.Invalidate();
+		}
+	}
+
+	[HarmonyPatch(typeof(GenScene), nameof(GenScene.GoToMainMenu))]
+	public static class GenScene_GoToMainMenu_Patch
+	{
+		public static void Prefix()
+		{
+			MapRenderState.SuspendAll();
+		}
+	}
+
+	[HarmonyPatch(typeof(Screen_Credits), nameof(Screen_Credits.PreOpen))]
+	public static class Screen_Credits_PreOpen_Patch
+	{
+		public static void Postfix()
+		{
+			MapRenderState.Refresh(force: true);
+		}
+	}
+
+	[HarmonyPatch(typeof(Screen_Credits), nameof(Screen_Credits.PostClose))]
+	public static class Screen_Credits_PostClose_Patch
+	{
+		public static void Postfix()
+		{
+			MapRenderState.Refresh(force: true);
 		}
 	}
 

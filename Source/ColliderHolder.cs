@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Verse;
 
@@ -29,10 +30,27 @@ namespace ZeFlammenwerfer
 			}
 			center.y = Tools.moteOverheadHeight;
 			collider.center = center;
+			collider.gameObject.SetActive(MapRenderState.ShouldRenderMap(pawn?.Map));
 			//PawnShooterTracker.trackers.TryGetValue(pawn)?.SetDirty();
 		}
 
 		public static void Unregister(Pawn pawn) => Remove(pawn);
+
+		public static void RefreshRenderedMap(Map renderedMap)
+		{
+			foreach (var pair in holders.ToArray())
+			{
+				var pawn = pair.Key;
+				var go = pair.Value;
+				if (pawn == null || go == null)
+					continue;
+
+				var visible = pawn.Spawned && pawn.Map == renderedMap;
+				go.SetActive(visible);
+				if (visible)
+					Register(pawn, pawn.DrawPos);
+			}
+		}
 
 		static GameObject Add(Pawn pawn)
 		{
