@@ -135,8 +135,7 @@ namespace ZeFlammenwerfer
 			var fuel = flamethrower == null ? null : FindBestFuel(actor, flamethrower);
 			if (flamethrower == null || fuel == null)
 				return null;
-			var job = JobMaker.MakeJob(DefDatabase<JobDef>.GetNamed("ZeFlammenwerfer_RefuelEquipped"), flamethrower, fuel);
-			job.SetTarget(TargetIndex.C, bearer);
+			var job = JobMaker.MakeJob(DefDatabase<JobDef>.GetNamed("ZeFlammenwerfer_RefuelEquipped"), bearer, fuel);
 			job.playerForced = forced;
 			return job;
 		}
@@ -176,7 +175,7 @@ namespace ZeFlammenwerfer
 				failReason = "Not ready for refuel";
 				return false;
 			}
-			if (!actor.CanReserve(flamethrower, 1, -1, null, forced))
+			if (!actor.CanReserve(bearer, 1, -1, null, forced))
 			{
 				failReason = "Cannot reserve target";
 				return false;
@@ -199,14 +198,15 @@ namespace ZeFlammenwerfer
 			return true;
 		}
 
-		public static void FinalizeEquippedRefueling(Job job, TargetIndex flamerInd = TargetIndex.A, TargetIndex fuelInd = TargetIndex.B)
+		public static void FinalizeEquippedRefueling(Job job)
 		{
-			var flamethrower = job.GetTarget(flamerInd).Thing as ZeFlammenwerfer;
+			var bearer = job.GetTarget(TargetIndex.A).Thing as Pawn;
+			var flamethrower = EquippedFlamethrower(bearer);
 			var compRefuelable = flamethrower?.refuelable ?? flamethrower?.TryGetComp<CompRefuelable>();
 			if (compRefuelable == null)
 				return;
 			if (job.placedThings.NullOrEmpty())
-				compRefuelable.Refuel(new List<Thing> { job.GetTarget(fuelInd).Thing });
+				compRefuelable.Refuel(new List<Thing> { job.GetTarget(TargetIndex.B).Thing });
 			else
 				compRefuelable.Refuel(job.placedThings.Select(thingCount => thingCount.thing).ToList());
 		}
