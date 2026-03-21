@@ -7,22 +7,24 @@ namespace ZeFlammenwerfer
 {
 	public class JobDriver_RefuelEquippedFlammenwerfer : JobDriver
 	{
-		const TargetIndex BearerInd = TargetIndex.A;
+		const TargetIndex FlamethrowerInd = TargetIndex.A;
 		const TargetIndex FuelInd = TargetIndex.B;
+		const TargetIndex BearerInd = TargetIndex.C;
 
 		Pawn Bearer => job.GetTarget(BearerInd).Thing as Pawn;
-		ZeFlammenwerfer Flamethrower => FlamethrowerRefuelUtility.EquippedFlamethrower(Bearer);
+		ZeFlammenwerfer Flamethrower => job.GetTarget(FlamethrowerInd).Thing as ZeFlammenwerfer;
 		CompRefuelable RefuelableComp => Flamethrower?.refuelable ?? Flamethrower?.TryGetComp<CompRefuelable>();
 
 		public override bool TryMakePreToilReservations(bool errorOnFailed)
 		{
-			if (pawn.Reserve(Bearer, job, 1, -1, null, errorOnFailed))
+			if (pawn.Reserve(Flamethrower, job, 1, -1, null, errorOnFailed))
 				return pawn.Reserve(job.GetTarget(FuelInd), job, 1, -1, null, errorOnFailed);
 			return false;
 		}
 
 		public override IEnumerable<Toil> MakeNewToils()
 		{
+			this.FailOnDespawnedNullOrForbidden(FlamethrowerInd);
 			this.FailOnDespawnedNullOrForbidden(FuelInd);
 			AddEndCondition(() => RefuelableComp == null ? JobCondition.Incompletable : (RefuelableComp.IsFull ? JobCondition.Succeeded : JobCondition.Ongoing));
 			AddFailCondition(() => Bearer == null || !Bearer.Spawned || Bearer.Dead);
@@ -40,12 +42,13 @@ namespace ZeFlammenwerfer
 			yield return Toils_Haul.CheckForGetOpportunityDuplicate(reserveFuel, FuelInd, TargetIndex.None, takeFromValidStorage: true);
 			yield return Toils_Goto.GotoThing(BearerInd, PathEndMode.Touch);
 			yield return Toils_General.Wait(240).FailOnDestroyedNullOrForbidden(FuelInd)
+				.FailOnDestroyedNullOrForbidden(FlamethrowerInd)
 				.FailOnCannotTouch(BearerInd, PathEndMode.Touch)
 				.FailOn(() => Flamethrower == null)
 				.WithProgressBarToilDelay(BearerInd);
 			yield return Toils_General.Do(delegate
 			{
-				FlamethrowerRefuelUtility.FinalizeEquippedRefueling(job);
+				FlamethrowerRefuelUtility.FinalizeEquippedRefueling(job, FlamethrowerInd, FuelInd);
 			});
 		}
 	}
