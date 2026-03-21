@@ -10,12 +10,14 @@ namespace ZeFlammenwerfer
 {
 	static class FlameDangerTracker
 	{
-		const bool renderDebugCells = true;
+		const bool renderDebugCells = false;
 		const ushort flameCoreCellCost = 10000;
 		const ushort dangerousCellCost = 600;
 		const float blockerFillPercent = 0.25f;
 		const int repathProbeCellCount = 3;
 		static readonly Color debugDangerCellColor = new Color(0.1f, 0.45f, 1f, 0.2f);
+
+		public static bool RenderDebugCellsEnabled => renderDebugCells;
 
 		sealed class ShooterState
 		{

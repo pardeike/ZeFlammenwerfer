@@ -1,35 +1,21 @@
-﻿using HarmonyLib;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using Verse;
+using Verse.AI;
 
 namespace ZeFlammenwerfer
 {
-	[HarmonyPatch]
 	public static class WeaponTool
 	{
-		static Vector3 location;
-		static float angle;
-
 		public static (Vector3, float) GetAimingCenter(Pawn pawn)
 		{
-			location = Vector3.negativeInfinity;
-			angle = int.MinValue;
-			var pawnRenderFlags = pawn.Drawer.renderer.GetDefaultRenderFlags(pawn);
-			pawnRenderFlags |= PawnRenderFlags.Clothes;
-			pawnRenderFlags |= PawnRenderFlags.Headgear;
-			CalculateCenter(pawn.Drawer.renderer, pawn.DrawPos, pawn.Rotation, pawnRenderFlags);
-			return (location, angle);
+			return TryGetAimingData(pawn, out var drawPos, out var aimAngle)
+				? (drawPos, aimAngle)
+				: (Vector3.negativeInfinity, int.MinValue);
 		}
 
 		public static bool IsAiming(Pawn pawn)
 		{
-			angle = int.MinValue;
-			var pawnRenderFlags = pawn.Drawer.renderer.GetDefaultRenderFlags(pawn);
-			pawnRenderFlags |= PawnRenderFlags.Clothes;
-			pawnRenderFlags |= PawnRenderFlags.Headgear;
-			CheckIsAiming(pawn.Drawer.renderer, pawn.DrawPos, pawn.Rotation, pawnRenderFlags);
-			return angle != int.MinValue;
+			return TryGetAimingData(pawn, out _, out _);
 		}
 
 		public static bool IsFlipped(float aimAngle)
@@ -37,54 +23,52 @@ namespace ZeFlammenwerfer
 			return aimAngle > 200f && aimAngle < 340f;
 		}
 
-		public static void DrawEquipmentAiming(PawnRenderer _1, Thing _2, Vector3 drawLoc, float aimAngle)
+		static bool TryGetAimingData(Pawn pawn, out Vector3 drawPos, out float aimAngle)
 		{
-			location = drawLoc;
-			angle = aimAngle;
-		}
+			drawPos = Vector3.negativeInfinity;
+			aimAngle = int.MinValue;
 
-		public static void DoNothing(PawnRenderer _1, Thing _2, Vector3 _3, float _4)
-		{
-		}
+			if (pawn?.equipment?.Primary == null)
+				return false;
+			if (pawn.equipment.Primary is not ZeFlammenwerfer flamethrower)
+				return false;
+			if (flamethrower.CanFireNow == false)
+				return false;
 
-		[HarmonyReversePatch(HarmonyReversePatchType.Original)]
-		[HarmonyPatch(typeof(PawnRenderer), nameof(PawnRenderer.DrawEquipment))]
-		public static void CalculateCenter(PawnRenderer _1, Vector3 _2, Rot4 _3, PawnRenderFlags _4)
-		{
-			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+			var curJob = pawn.CurJob;
+			if (curJob == null || curJob.def?.neverShowWeapon == true)
+				return false;
+
+			LocalTargetInfo target;
+			if (flamethrower.HasManualTarget)
 			{
-				var from = AccessTools.Method(typeof(PawnRenderer), nameof(PawnRenderer.DrawEquipmentAiming));
-				var to = SymbolExtensions.GetMethodInfo(() => DrawEquipmentAiming(default, default, default, default));
-				return instructions.MethodReplacer(from, to);
+				target = flamethrower.CurrentAimTarget;
+			}
+			else
+			{
+				if (pawn.stances?.curStance is not Stance_Busy stance_Busy || stance_Busy.neverAimWeapon || stance_Busy.focusTarg.IsValid == false)
+					return false;
+				target = stance_Busy.focusTarg;
 			}
 
-			// make compiler happy
-			_ = Transpiler(default);
-		}
+			if (target.IsValid == false)
+				return false;
 
-		[HarmonyReversePatch(HarmonyReversePatchType.Original)]
-		[HarmonyPatch(typeof(PawnRenderer), nameof(PawnRenderer.DrawEquipment))]
-		public static void CheckIsAiming(PawnRenderer _1, Vector3 _2, Rot4 _3, PawnRenderFlags _4)
-		{
-			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-			{
-				var from = AccessTools.Method(typeof(PawnRenderer), nameof(PawnRenderer.DrawEquipmentAiming));
-				var to1 = SymbolExtensions.GetMethodInfo(() => DrawEquipmentAiming(default, default, default, default));
-				var to2 = SymbolExtensions.GetMethodInfo(() => DoNothing(default, default, default, default));
-				var firstTime = true;
-				foreach (var instruction in instructions)
-				{
-					if (instruction.Calls(from))
-					{
-						instruction.operand = firstTime ? to1 : to2;
-						firstTime = false;
-					}
-					yield return instruction;
-				}
-			}
+			var targetPos = target.HasThing ? target.Thing.DrawPos : target.Cell.ToVector3Shifted();
+			var targetVector = targetPos - pawn.DrawPos;
+			if (targetVector.MagnitudeHorizontalSquared() <= 0.001f)
+				return false;
 
-			// make compiler happy
-			_ = Transpiler(default);
+			aimAngle = targetVector.AngleFlat();
+			var currentEffectiveVerb = pawn.CurrentEffectiveVerb;
+			if (currentEffectiveVerb?.AimAngleOverride.HasValue == true)
+				aimAngle = currentEffectiveVerb.AimAngleOverride.Value;
+
+			var equipmentDrawDistanceFactor = pawn.ageTracker.CurLifeStage.equipmentDrawDistanceFactor;
+			drawPos = pawn.DrawPos
+				+ new Vector3(0f, 0f, 0.4f + pawn.equipment.Primary.def.equippedDistanceOffset).RotatedBy(aimAngle)
+				* equipmentDrawDistanceFactor;
+			return true;
 		}
 	}
 }

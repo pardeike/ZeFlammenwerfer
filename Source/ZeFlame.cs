@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using UnityEngine;
 using Verse;
 
 namespace ZeFlammenwerfer
@@ -13,6 +14,8 @@ namespace ZeFlammenwerfer
 			flameComp = comp;
 			owner = flameComp.fire.GetComponent<ZeOwner>();
 			owner.launcher = launcher;
+			flameComp.NotifyShot();
+			DebugTrace.Log($"Configure launcher={launcher?.LabelShortCap ?? "null"} activeBefore={flameComp.isActive} existingFlames={flameComp.flames.Count}");
 			flameComp.SetActive(true);
 			flameComp.flames.Insert(0, this);
 		}
@@ -31,15 +34,15 @@ namespace ZeFlammenwerfer
 			if (flameComp == null)
 				return;
 			Destroy(DestroyMode.Vanish);
-			flameComp.SetActive(false);
 			_ = flameComp.flames.Remove(this);
+			DebugTrace.Log($"Impact hit={hitThing?.LabelCap ?? "cell"} remainingFlames={flameComp.flames.Count}");
 			flameComp = null;
 		}
 
-		public override void Draw() { }
+		public override void DrawAt(Vector3 drawLoc, bool flip) { }
 		public override void Print(SectionLayer layer) { }
 		public override void DrawGUIOverlay() { }
-		public override IEnumerable<FloatMenuOption> GetMultiSelectFloatMenuOptions(List<Pawn> selPawns) { yield break; }
+		public override IEnumerable<FloatMenuOption> GetMultiSelectFloatMenuOptions(IEnumerable<Pawn> selPawns) { yield break; }
 		public override string GetInspectString() { return ""; }
 	}
 }

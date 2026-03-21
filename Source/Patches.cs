@@ -15,6 +15,11 @@ namespace ZeFlammenwerfer
 	[HarmonyPatch(typeof(MapInterface), nameof(MapInterface.MapInterfaceUpdate))]
 	static class MapInterface_MapInterfaceOnGUI_AfterMainTabs_Patch
 	{
+		static bool Prepare()
+		{
+			return FlameDangerTracker.RenderDebugCellsEnabled;
+		}
+
 		static void Postfix()
 		{
 			FlameDangerTracker.DrawDebugCells(Find.CurrentMap);

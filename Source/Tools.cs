@@ -51,7 +51,7 @@ namespace ZeFlammenwerfer
 		{
 			if (thing is not Pawn pawn || pawn.RaceProps.IsMechanoid == false)
 			{
-				thing.TryAttachFire(amount);
+				thing.TryAttachFire(amount, null);
 				return;
 			}
 			if (pawn.Destroyed || pawn.HasAttachment(ThingDefOf.Fire))

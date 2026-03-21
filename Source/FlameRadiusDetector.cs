@@ -12,7 +12,7 @@ namespace ZeFlammenwerfer
 		public GameObject go;
 		public const int maxRadius = 9;
 		public const int maxRadiusSquared = maxRadius * maxRadius;
-		public static readonly Dictionary<IntVec3, BoxCollider> colliders = new();
+		public readonly Dictionary<IntVec3, BoxCollider> colliders = new();
 
 		//public Color color = GenColor.RandomColorOpaque();
 		//public CellBoolDrawer currentMapDrawer;

@@ -8,12 +8,15 @@ namespace ZeFlammenwerfer
 {
 	public class ZeFlameComp : ThingComp
 	{
+		const int activeGraceTicks = 120;
+
 		public GameObject fire;
 		public GameObject smoke;
 		public ZeFlameSound sound;
 		public List<ZeFlame> flames = new();
 		public bool isActive;
 		public bool isPipeActive;
+		public int lastShotTick = int.MinValue;
 
 		public GameObject curveInner, curveOuter;
 		public IBGCurvePointI[] pointsInner, pointsOuter;
@@ -91,6 +94,8 @@ namespace ZeFlammenwerfer
 
 			UpdateDrawPos(parent as Pawn);
 			sound = new ZeFlameSound(fire);
+			fire.GetComponent<ParticleSystem>()?.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+			smoke.GetComponent<ParticleSystem>()?.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 			SetActive(false, true);
 
 			_ = allParticleSystems.Add(fire.GetComponent<ParticleSystem>());
@@ -149,7 +154,8 @@ namespace ZeFlammenwerfer
 			var (center, angle) = WeaponTool.GetAimingCenter(pawn);
 			if (angle == int.MinValue)
 			{
-				SetPipeActive(false);
+				if (isActive == false)
+					SetPipeActive(false);
 				return;
 			}
 
@@ -180,25 +186,44 @@ namespace ZeFlammenwerfer
 			pointsOuter[1].ControlFirstWorld = control;
 		}
 
+		public void NotifyShot()
+		{
+			lastShotTick = GenTicks.TicksGame;
+		}
+
+		public bool ShouldStayActiveBetweenShots()
+		{
+			return lastShotTick != int.MinValue && GenTicks.TicksGame - lastShotTick <= activeGraceTicks;
+		}
+
 		public void SetActive(bool active, bool force = false)
 		{
 			if (isActive == active && force == false)
 				return;
 			isActive = active;
+			var fireParticleSystem = fire.GetComponent<ParticleSystem>();
+			var smokeParticleSystem = smoke.GetComponent<ParticleSystem>();
+			var emission1 = fireParticleSystem.emission;
+			emission1.enabled = active;
+			var emission2 = smokeParticleSystem.emission;
+			emission2.enabled = active;
 
 			if (active)
+			{
+				fireParticleSystem.Play(true);
+				smokeParticleSystem.Play(true);
 				sound.Start();
+			}
 			else
 			{
 				flames.DoIf(f => f.Destroyed == false, f => f.Destroy(DestroyMode.Vanish));
 				flames.Clear();
 				sound.Stop();
+				fireParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+				smokeParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
 			}
 
-			var emission1 = fire.GetComponent<ParticleSystem>().emission;
-			emission1.enabled = active;
-			var emission2 = smoke.GetComponent<ParticleSystem>().emission;
-			emission2.enabled = active;
+			DebugTrace.Log($"SetActive(active={active}, force={force}) flames={flames.Count} firePlaying={fireParticleSystem.isPlaying} firePaused={fireParticleSystem.isPaused} fireStopped={fireParticleSystem.isStopped} smokePlaying={smokeParticleSystem.isPlaying} smokePaused={smokeParticleSystem.isPaused} smokeStopped={smokeParticleSystem.isStopped}");
 		}
 	}
 

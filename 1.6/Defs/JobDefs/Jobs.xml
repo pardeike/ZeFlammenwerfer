@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+	<JobDef>
+		<defName>ZeFlammenwerfer_RefuelEquipped</defName>
+		<driverClass>ZeFlammenwerfer.JobDriver_RefuelEquippedFlammenwerfer</driverClass>
+		<reportString>refueling a flamethrower</reportString>
+		<casualInterruptible>false</casualInterruptible>
+	</JobDef>
+</Defs>

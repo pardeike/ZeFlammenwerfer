@@ -46,16 +46,19 @@ namespace ZeFlammenwerfer
 		public void Remove()
 		{
 			allFlameSounds.Remove(this);
+			started = false;
 
-			UnityEngine.Object.DestroyImmediate(startEndSource);
+			if (startEndSource != null)
+				UnityEngine.Object.DestroyImmediate(startEndSource);
 			startEndSource = null;
-			UnityEngine.Object.DestroyImmediate(loopSource);
+			if (loopSource != null)
+				UnityEngine.Object.DestroyImmediate(loopSource);
 			loopSource = null;
 		}
 
 		public void Start()
 		{
-			if (started)
+			if (started || startEndSource == null || loopSource == null)
 				return;
 
 			startEndSource.clip = start;
@@ -68,8 +71,11 @@ namespace ZeFlammenwerfer
 
 		public void Stop()
 		{
-			if (started == false)
+			if (started == false || startEndSource == null || loopSource == null)
+			{
+				started = false;
 				return;
+			}
 
 			startEndSource.clip = end;
 			startEndSource.Play();
@@ -80,8 +86,11 @@ namespace ZeFlammenwerfer
 
 		public void SetPause(bool paused)
 		{
-			if (started == false)
+			if (started == false || startEndSource == null || loopSource == null)
+			{
+				started = false;
 				return;
+			}
 
 			if (paused)
 			{

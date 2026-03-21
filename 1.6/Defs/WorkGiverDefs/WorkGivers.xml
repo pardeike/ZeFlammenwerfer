@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+	<WorkGiverDef>
+		<defName>ZeFlammenwerfer_Refuel</defName>
+		<label>refuel flamethrowers</label>
+		<giverClass>ZeFlammenwerfer.WorkGiver_RefuelFlammenwerfer</giverClass>
+		<workType>Hauling</workType>
+		<verb>refuel</verb>
+		<gerund>refueling</gerund>
+		<priorityInType>141</priorityInType>
+		<requiredCapacities>
+			<li>Manipulation</li>
+		</requiredCapacities>
+		<prioritizeSustains>true</prioritizeSustains>
+	</WorkGiverDef>
+</Defs>
