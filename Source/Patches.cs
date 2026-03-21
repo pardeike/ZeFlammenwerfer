@@ -4,21 +4,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using Unity.Collections;
 using UnityEngine;
 using Verse;
+using Verse.AI;
 
 namespace ZeFlammenwerfer
 {
 	// debug draw
-	//[HarmonyPatch(typeof(MapInterface))]
-	//[HarmonyPatch(nameof(MapInterface.MapInterfaceUpdate))]
-	//class MapInterface_MapInterfaceOnGUI_AfterMainTabs_Patch
-	//{
-	//	static void Postfix()
-	//	{
-	//		PawnShooterTracker.trackers.Values.Do(detector => detector.DrawerUpdate());
-	//	}
-	//}
+	[HarmonyPatch(typeof(MapInterface), nameof(MapInterface.MapInterfaceUpdate))]
+	static class MapInterface_MapInterfaceOnGUI_AfterMainTabs_Patch
+	{
+		static void Postfix()
+		{
+			FlameDangerTracker.DrawDebugCells(Find.CurrentMap);
+		}
+	}
 
 	// remove fire deflect sound (too many when hit with a flamethrower)
 	//
@@ -46,21 +47,20 @@ namespace ZeFlammenwerfer
 
 	// draw tank and pipe
 	//
-	[HarmonyPatch(typeof(PawnRenderer), nameof(PawnRenderer.DrawDynamicParts))]
+	[HarmonyPatch(typeof(PawnRenderUtility), nameof(PawnRenderUtility.DrawEquipmentAndApparelExtras))]
 	public static class PawnRenderer_RenderPawnInternal_Patch
 	{
 		public const float magicOffset = 0.008687258f;
 
-		public static void Postfix(PawnRenderer __instance, Vector3 rootLoc)
+		public static void Postfix(Pawn pawn, Vector3 drawPos, Rot4 facing)
 		{
-			var pawn = __instance.graphics.pawn;
 			if (pawn.Downed || pawn.Dead)
 				return;
 			if (pawn.HasFlameThrower() == false)
 				return;
 
-			var orientation = pawn.Rotation;
-			var location = rootLoc;
+			var orientation = facing;
+			var location = drawPos;
 			location.y += magicOffset + (orientation == Rot4.North ? 0.0014478763f : -0.0014478763f);
 			Graphics.DrawMesh(MeshPool.plane10, location + ZeFlameComp.tankOffset[orientation.AsInt], Quaternion.identity, Assets.tank, 0);
 
@@ -86,6 +86,7 @@ namespace ZeFlammenwerfer
 		{
 			ZeFlameComp.allParticleSystems?.Do(Object.DestroyImmediate);
 			ZeFlameComp.allParticleSystems = new HashSet<ParticleSystem>();
+			FlameDangerTracker.ClearAll();
 		}
 	}
 
@@ -109,7 +110,10 @@ namespace ZeFlammenwerfer
 		public static IEnumerable<Gizmo> Postfix(IEnumerable<Gizmo> gizmos, ThingWithComps eq)
 		{
 			if (eq is ZeFlammenwerfer flamethrower && flamethrower.pawn != null)
-				yield return new Gizmo_RefuelableFuelStatus { refuelable = flamethrower.refuelable };
+			{
+				foreach (var gizmo in flamethrower.refuelable?.CompGetGizmosExtra() ?? Enumerable.Empty<Gizmo>())
+					yield return gizmo;
+			}
 			foreach (var gizmo in gizmos)
 				yield return gizmo;
 		}
@@ -132,8 +136,8 @@ namespace ZeFlammenwerfer
 				return;
 			var paused = __instance.Paused;
 
-			ZeFlameSound.allFlameSounds.Do(sound => sound.SetPause(paused));
-			ZeFlameComp.allParticleSystems.Where(ps => ps.isPaused != paused).Do(particleSystem =>
+			ZeFlameSound.allFlameSounds.Where(sound => sound != null).Do(sound => sound.SetPause(paused));
+			ZeFlameComp.allParticleSystems.Where(ps => ps != null && ps.isPaused != paused).Do(particleSystem =>
 			{
 				if (paused)
 					particleSystem.Pause(true);
@@ -145,20 +149,53 @@ namespace ZeFlammenwerfer
 
 	// stop flamethrower when removed
 	//
-	[HarmonyPatch(typeof(Pawn_EquipmentTracker), nameof(Pawn_EquipmentTracker.Notify_EquipmentRemoved))]
-	public static class Pawn_EquipmentTracker_Notify_EquipmentRemoved_Patch
-	{
-		public static void Prefix(ThingWithComps eq)
+		[HarmonyPatch(typeof(Pawn_EquipmentTracker), nameof(Pawn_EquipmentTracker.Notify_EquipmentRemoved))]
+		public static class Pawn_EquipmentTracker_Notify_EquipmentRemoved_Patch
+		{
+			public static void Prefix(ThingWithComps eq)
 		{
 			var flameComp = eq.TryGetComp<ZeFlameComp>();
 			flameComp?.SetActive(false);
-			flameComp?.SetPipeActive(false);
+				flameComp?.SetPipeActive(false);
+			if (eq is ZeFlammenwerfer flamethrower)
+			{
+				flamethrower.ClearManualTarget();
+				FlameDangerTracker.Clear(flamethrower.pawn);
+			}
+			}
 		}
-	}
 
-	// make fire below flame projectiles
-	//
-	[HarmonyPatch(typeof(Thing), nameof(Thing.Position), MethodType.Setter)]
+		[HarmonyPatch(typeof(Pawn_EquipmentTracker), nameof(Pawn_EquipmentTracker.TryDropEquipment))]
+		public static class Pawn_EquipmentTracker_TryDropEquipment_Patch
+		{
+			public static void Prefix(ThingWithComps eq, ref bool forbid)
+			{
+				if (eq is ZeFlammenwerfer)
+					forbid = false;
+			}
+		}
+
+		[HarmonyPatch(typeof(FloatMenuMakerMap), nameof(FloatMenuMakerMap.GetOptions))]
+		public static class FloatMenuMakerMap_GetOptions_Patch
+		{
+			public static void Postfix(FloatMenuContext context, ref List<FloatMenuOption> __result)
+			{
+				if (context == null || context.IsMultiselect || context.FirstSelectedPawn == null || __result == null)
+					return;
+				var actor = context.FirstSelectedPawn;
+				var droppedFlamethrower = context.ClickedThings.OfType<ZeFlammenwerfer>().FirstOrDefault(thing => thing.pawn == null);
+				if (droppedFlamethrower != null)
+					__result.Add(FlamethrowerRefuelUtility.MakeGroundRefuelOption(actor, droppedFlamethrower));
+				var bearer = context.ClickedPawns.FirstOrDefault(pawn => pawn != actor && FlamethrowerRefuelUtility.EquippedFlamethrower(pawn) != null);
+				if (bearer == null)
+					return;
+				__result.Add(FlamethrowerRefuelUtility.MakeEquippedRefuelOption(actor, bearer));
+			}
+		}
+
+		// make fire below flame projectiles
+		//
+		[HarmonyPatch(typeof(Thing), nameof(Thing.Position), MethodType.Setter)]
 	public static class Thing_Position_Patch
 	{
 		public static void Postfix(Thing __instance, IntVec3 value)
@@ -247,21 +284,148 @@ namespace ZeFlammenwerfer
 
 	// attach flamethrower logic to custom projectile
 	//
-	[HarmonyPatch(typeof(Projectile), nameof(Projectile.Launch))]
-	[HarmonyPatch(new[] { typeof(Thing), typeof(Vector3), typeof(LocalTargetInfo), typeof(LocalTargetInfo), typeof(ProjectileHitFlags), typeof(bool), typeof(Thing), typeof(ThingDef) })]
-	public static class Projectile_Launch_Patch
-	{
-		public static void Postfix(Thing launcher, Projectile __instance, Thing equipment)
+		[HarmonyPatch(typeof(Projectile), nameof(Projectile.Launch))]
+		[HarmonyPatch(new[] { typeof(Thing), typeof(Vector3), typeof(LocalTargetInfo), typeof(LocalTargetInfo), typeof(ProjectileHitFlags), typeof(bool), typeof(Thing), typeof(ThingDef) })]
+		public static class Projectile_Launch_Patch
 		{
-			if (__instance is not ZeFlame flame)
-				return;
+			static bool Prefix(Projectile __instance, Thing equipment)
+			{
+				if (__instance is not ZeFlame)
+					return true;
+				if (equipment is not ZeFlammenwerfer flamethrower || flamethrower.refuelable == null)
+					return true;
+				if (flamethrower.CanFireNow == false)
+				{
+					flamethrower.flameComp?.SetActive(false);
+					return false;
+				}
+				if (flamethrower.FuelPerShot > 0f)
+					flamethrower.refuelable.ConsumeFuel(flamethrower.FuelPerShot);
+				return true;
+			}
+
+			public static void Postfix(Thing launcher, Projectile __instance, Thing equipment)
+			{
+				if (__instance is not ZeFlame flame)
+					return;
 			if (launcher is Pawn pawn)
 			{
 				var flameComp = equipment?.TryGetComp<ZeFlameComp>();
+				DebugTrace.Log($"Projectile.Launch projectile={__instance.def.defName} launcher={pawn.LabelShortCap} equipment={equipment?.def?.defName ?? "null"} flameComp={(flameComp != null ? "present" : "missing")}");
 				if (flameComp == null)
 					return;
 				flame.Configure(pawn, flameComp);
 			}
+		}
+	}
+
+	[HarmonyPatch(typeof(PathFinderMapData), nameof(PathFinderMapData.ParameterizeGridJob))]
+	public static class PathFinderMapData_ParameterizeGridJob_Patch
+	{
+		public static void Postfix(PathRequest request, ref PathGridJob job)
+		{
+			if (request?.map == null)
+				return;
+			if (request.customizer != null)
+				return;
+			if (FlameDangerTracker.ShouldIgnorePathDanger(request.pawn))
+				return;
+			if (FlameDangerTracker.TryGetRouteCostGrid(request.map, out NativeArray<ushort>.ReadOnly routeCosts) == false)
+				return;
+
+			job.custom = routeCosts;
+		}
+	}
+
+	[HarmonyPatch]
+	public static class Pawn_PathFollower_SetupMoveIntoNextCell_Patch
+	{
+		public static MethodBase TargetMethod()
+		{
+			return AccessTools.Method(typeof(Pawn_PathFollower), "SetupMoveIntoNextCell");
+		}
+
+		public static void Postfix(Pawn_PathFollower __instance)
+		{
+			FlameDangerTracker.ResetPathIfUpcomingDanger(__instance);
+		}
+	}
+
+	[HarmonyPatch(typeof(Verb), nameof(Verb.Available))]
+	public static class Verb_Available_Patch
+	{
+		public static void Postfix(Verb __instance, ref bool __result)
+		{
+			if (__result == false)
+				return;
+			if (__instance.EquipmentSource is ZeFlammenwerfer flamethrower && flamethrower.CanFireNow == false)
+				__result = false;
+		}
+	}
+
+	[HarmonyPatch(typeof(Verb), nameof(Verb.TryStartCastOn))]
+	[HarmonyPatch(new[] { typeof(LocalTargetInfo), typeof(LocalTargetInfo), typeof(bool), typeof(bool), typeof(bool), typeof(bool) })]
+	public static class Verb_TryStartCastOn_Patch
+	{
+		public static bool Prefix(Verb __instance)
+		{
+			return __instance.EquipmentSource is not ZeFlammenwerfer flamethrower || flamethrower.CanFireNow;
+		}
+	}
+
+	[HarmonyPatch(typeof(Verb), nameof(Verb.OrderForceTarget))]
+	public static class Verb_OrderForceTarget_Patch
+	{
+		public static bool Prefix(Verb __instance, LocalTargetInfo target)
+		{
+			if (__instance.EquipmentSource is not ZeFlammenwerfer flamethrower)
+				return true;
+			if (__instance.CasterPawn == null || flamethrower.pawn != __instance.CasterPawn)
+				return true;
+
+			flamethrower.OrderManualTarget(target);
+			return false;
+		}
+	}
+
+	[HarmonyPatch(typeof(Targeter), nameof(Targeter.OrderPawnForceTarget))]
+	public static class Targeter_OrderPawnForceTarget_Patch
+	{
+		static readonly MethodInfo currentTargetUnderMouse = AccessTools.Method(typeof(Targeter), "CurrentTargetUnderMouse", new[] { typeof(bool) });
+
+		public static bool Prefix(Targeter __instance, ITargetingSource targetingSource)
+		{
+			if (targetingSource is not Verb verb)
+				return true;
+			if (verb.EquipmentSource is not ZeFlammenwerfer flamethrower)
+				return true;
+			if (__instance == null || currentTargetUnderMouse == null || flamethrower.pawn != verb.CasterPawn)
+				return true;
+
+			var target = (LocalTargetInfo)currentTargetUnderMouse.Invoke(__instance, new object[] { true });
+			if (target.IsValid)
+				flamethrower.OrderManualTarget(target);
+			__instance.StopTargeting();
+			return false;
+		}
+	}
+
+	[HarmonyPatch]
+	public static class VerbTracker_CreateVerbTargetCommand_Patch
+	{
+		public static MethodBase TargetMethod()
+		{
+			return AccessTools.Method(typeof(VerbTracker), "CreateVerbTargetCommand", new[] { typeof(Thing), typeof(Verb) });
+		}
+
+		public static void Postfix(Thing ownerThing, Verb verb, Command_VerbTarget __result)
+		{
+			if (ownerThing is not ZeFlammenwerfer flamethrower || __result == null)
+				return;
+
+			__result.requiresAvailableVerb = true;
+			if (flamethrower.CanFireNow == false)
+				__result.Disable(flamethrower.OutOfFuelReason);
 		}
 	}
 
