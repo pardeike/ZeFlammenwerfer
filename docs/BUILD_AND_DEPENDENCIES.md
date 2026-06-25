@@ -21,7 +21,7 @@ For quieter local builds:
 Release builds write:
 
 - `1.6/Assemblies/ZeFlammenwerfer.dll`
-- `1.6/Assemblies/RimBridgeServer.Annotations.dll`
+- `1.6/BridgeTools/ZeFlammenwerfer.BridgeTools.dll`
 
 The project has a `CopyToRimworld` MSBuild target that runs when `RIMWORLD_MOD_DIR` is set. That target:
 
@@ -40,8 +40,9 @@ Current top-level package references in `Source/ZeFlammenwerfer.csproj`:
 - `Lib.Harmony`, with `ExcludeAssets="runtime"`
 - `Microsoft.NETCore.Platforms`
 - `Microsoft.NETFramework.ReferenceAssemblies.net472`
-- `RimBridgeServer.Annotations`
 - `TaskPubliciser`
+
+`Source/BridgeTools/ZeFlammenwerfer.BridgeTools.csproj` builds the RimBridge companion tool assembly against the official `RimBridgeServer.Sdk` NuGet package and writes it to `1.6/BridgeTools`. `NuGet.config` clears inherited package sources and enables only `nuget.org`, so restores do not accidentally consume a sibling local SDK feed. The companion reference uses `PrivateAssets="all"` and `ExcludeAssets="runtime"` so `RimBridgeServer.Sdk.dll` is not deployed beside the companion DLL.
 
 `Lib.Harmony` is a compile-time package here. The runtime Harmony dependency is provided by the RimWorld Harmony mod declared in `About/About.xml`.
 

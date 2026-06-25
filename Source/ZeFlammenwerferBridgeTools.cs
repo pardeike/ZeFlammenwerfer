@@ -1,9 +1,11 @@
 using BansheeGz.BGSpline.Curve;
-using RimBridgeServer.Annotations;
+using RimBridgeServer.Sdk;
 using RimWorld;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using Verse;
 using Verse.AI;
@@ -12,6 +14,42 @@ namespace ZeFlammenwerfer
 {
 	public sealed class ZeFlammenwerferBridgeTools
 	{
+		sealed class AimSweepPose
+		{
+			public readonly string Label;
+			public readonly string Rotation;
+			public readonly int XUnit;
+			public readonly int ZUnit;
+
+			public AimSweepPose(string label, string rotation, int xUnit, int zUnit)
+			{
+				Label = label;
+				Rotation = rotation;
+				XUnit = xUnit;
+				ZUnit = zUnit;
+			}
+		}
+
+		static readonly AimSweepPose[] TankPipeAimSweep =
+		{
+			new("01-north", "north", 0, 2),
+			new("02-north-northeast", "north", 1, 2),
+			new("03-northeast", "east", 2, 2),
+			new("04-east-northeast", "east", 2, 1),
+			new("05-east", "east", 2, 0),
+			new("06-east-southeast", "east", 2, -1),
+			new("07-southeast", "south", 2, -2),
+			new("08-south-southeast", "south", 1, -2),
+			new("09-south", "south", 0, -2),
+			new("10-south-southwest", "south", -1, -2),
+			new("11-southwest", "west", -2, -2),
+			new("12-west-southwest", "west", -2, -1),
+			new("13-west", "west", -2, 0),
+			new("14-west-northwest", "west", -2, 1),
+			new("15-northwest", "north", -2, 2),
+			new("16-north-northwest", "north", -1, 2)
+		};
+
 		static Map CurrentMap => Find.CurrentMap;
 
 		static string StableThingId(Thing thing)
@@ -585,6 +623,61 @@ namespace ZeFlammenwerfer
 			return CellRect.WholeMap(map).ClosestCellTo(cell);
 		}
 
+		static int AimSweepOffset(int unit, int radius, int halfRadius)
+		{
+			if (unit == 0)
+				return 0;
+
+			var magnitude = Math.Abs(unit) == 2 ? radius : halfRadius;
+			return unit > 0 ? magnitude : -magnitude;
+		}
+
+		static IntVec3 AimSweepTargetCell(AimSweepPose pose, IntVec3 origin, int radius, int halfRadius)
+		{
+			return new IntVec3(
+				origin.x + AimSweepOffset(pose.XUnit, radius, halfRadius),
+				0,
+				origin.z + AimSweepOffset(pose.ZUnit, radius, halfRadius));
+		}
+
+		static object DescribeAimSweepPose(AimSweepPose pose, int index, IntVec3 origin, int radius, int halfRadius)
+		{
+			return new
+			{
+				index,
+				label = pose.Label,
+				rotation = pose.Rotation,
+				target = DescribeCell(AimSweepTargetCell(pose, origin, radius, halfRadius))
+			};
+		}
+
+		static RimBridgeToolCallResult<object> LocalResult(object result)
+		{
+			return new RimBridgeToolCallResult<object> { Success = true, Result = result };
+		}
+
+		static LocalTargetInfo ApplyRenderPose(Pawn pawn, ZeFlammenwerfer flamethrower, Rot4 rotation, IntVec3 targetCell, bool draft, bool setManualTarget, bool activateVisual, bool stopMovement, bool clearUiState)
+		{
+			if (draft && pawn.drafter != null)
+				pawn.drafter.Drafted = true;
+			if (stopMovement)
+			{
+				pawn.pather?.StopDead();
+				pawn.jobs?.EndCurrentJob(JobCondition.InterruptForced);
+			}
+
+			pawn.Rotation = rotation;
+			var target = new LocalTargetInfo(targetCell);
+			if (setManualTarget && SameTarget(flamethrower.ManualTarget, target) == false)
+				flamethrower.OrderManualTarget(target);
+
+			RefreshFlameVisual(pawn, flamethrower, target, activateVisual);
+			if (clearUiState)
+				ClearUiStateForEvidence();
+
+			return target;
+		}
+
 		static void RefreshFlameVisual(Pawn pawn, ZeFlammenwerfer flamethrower, LocalTargetInfo target, bool active)
 		{
 			var comp = flamethrower.flameComp ?? flamethrower.TryGetComp<ZeFlameComp>();
@@ -608,6 +701,12 @@ namespace ZeFlammenwerfer
 			var vector = to - from;
 			var startOffset = vector.magnitude > 1f ? vector.normalized : Vector3.zero;
 			comp.Update(from + 1.75f * startOffset, to);
+		}
+
+		static void ClearUiStateForEvidence()
+		{
+			Find.Selector?.ClearSelection();
+			Find.DesignatorManager?.Deselect();
 		}
 
 		static object DescribeLineCell(Map map, IntVec3 cell)
@@ -727,7 +826,8 @@ namespace ZeFlammenwerfer
 			[ToolParameter(Description = "When true, set the pawn drafted so the manual target remains valid.", Required = false, DefaultValue = true)] bool draft = true,
 			[ToolParameter(Description = "When true, set the manual fire target to the pose target without toggling it off when already set.", Required = false, DefaultValue = true)] bool setManualTarget = true,
 			[ToolParameter(Description = "When true, make the flame particles and pipe active for screenshot inspection without spawning a projectile.", Required = false, DefaultValue = true)] bool activateVisual = true,
-			[ToolParameter(Description = "When true, stop the current path/job before posing. Leave false for walking render tests.", Required = false, DefaultValue = false)] bool stopMovement = false)
+			[ToolParameter(Description = "When true, stop the current path/job before posing. Leave false for walking render tests.", Required = false, DefaultValue = false)] bool stopMovement = false,
+			[ToolParameter(Description = "When true, clear RimWorld selection and designator UI before returning so screenshots are not contaminated by open tool palettes.", Required = false, DefaultValue = true)] bool clearUiState = true)
 		{
 			if (TryGetPawnAndWeapon(pawnId, out var pawn, out var flamethrower, out var error) == false)
 				return error;
@@ -745,25 +845,269 @@ namespace ZeFlammenwerfer
 				targetCell = DefaultTargetCell(pawn, parsedRotation);
 			}
 
-			if (draft && pawn.drafter != null)
-				pawn.drafter.Drafted = true;
-			if (stopMovement)
-			{
-				pawn.pather?.StopDead();
-				pawn.jobs?.EndCurrentJob(JobCondition.InterruptForced);
-			}
+			var target = ApplyRenderPose(pawn, flamethrower, parsedRotation, targetCell, draft, setManualTarget, activateVisual, stopMovement, clearUiState);
 
-			pawn.Rotation = parsedRotation;
-			var target = new LocalTargetInfo(targetCell);
-			if (setManualTarget && SameTarget(flamethrower.ManualTarget, target) == false)
-				flamethrower.OrderManualTarget(target);
-
-			RefreshFlameVisual(pawn, flamethrower, target, activateVisual);
 			return new
 			{
 				success = true,
 				target = DescribeTarget(target),
 				render = DescribeRenderState(pawn, flamethrower)
+			};
+		}
+
+		[Tool("zeflammenwerfer/list_tank_pipe_pose_sweep", Description = "List the standard 16-position tank/pipe close-up aim sweep used by the repeatable RimBridge evidence suite.")]
+		public static object ListTankPipePoseSweep(
+			[ToolParameter(Description = "Origin x coordinate, normally Rocha's occupied cell in the walkthrough save.", Required = false, DefaultValue = 117)] int cellX = 117,
+			[ToolParameter(Description = "Origin z coordinate, normally Rocha's occupied cell in the walkthrough save.", Required = false, DefaultValue = 114)] int cellZ = 114,
+			[ToolParameter(Description = "Far aim radius in cells.", Required = false, DefaultValue = 4)] int radius = 4,
+			[ToolParameter(Description = "Intermediate aim radius in cells.", Required = false, DefaultValue = 2)] int halfRadius = 2)
+		{
+			if (TryGetCell(cellX, cellZ, out var origin, out var error) == false)
+				return error;
+
+			radius = Mathf.Clamp(radius, 1, 30);
+			halfRadius = Mathf.Clamp(halfRadius, 1, radius);
+			return new
+			{
+				success = true,
+				origin = DescribeCell(origin),
+				radius,
+				halfRadius,
+				poseCount = TankPipeAimSweep.Length,
+				poses = TankPipeAimSweep
+					.Select((pose, index) => DescribeAimSweepPose(pose, index + 1, origin, radius, halfRadius))
+					.ToArray()
+			};
+		}
+
+		[Tool("zeflammenwerfer/set_tank_pipe_pose", Description = "Prepare one pose from the standard 16-position tank/pipe close-up aim sweep. Use RimBridge screenshots/ticks after this call for evidence capture.")]
+		public static object SetTankPipePose(
+			[ToolParameter(Description = "One-based pose index from zeflammenwerfer/list_tank_pipe_pose_sweep, 1 through 16.")] int poseIndex,
+			[ToolParameter(Description = "Optional stable pawn id such as Thing_Human776.", Required = false, DefaultValue = null)] string pawnId = null,
+			[ToolParameter(Description = "Origin x coordinate, normally Rocha's occupied cell in the walkthrough save.", Required = false, DefaultValue = 117)] int cellX = 117,
+			[ToolParameter(Description = "Origin z coordinate, normally Rocha's occupied cell in the walkthrough save.", Required = false, DefaultValue = 114)] int cellZ = 114,
+			[ToolParameter(Description = "Far aim radius in cells.", Required = false, DefaultValue = 4)] int radius = 4,
+			[ToolParameter(Description = "Intermediate aim radius in cells.", Required = false, DefaultValue = 2)] int halfRadius = 2,
+			[ToolParameter(Description = "When true, set the pawn drafted so the manual target remains valid.", Required = false, DefaultValue = true)] bool draft = true,
+			[ToolParameter(Description = "When true, make the flame particles active for screenshot inspection without spawning a projectile.", Required = false, DefaultValue = false)] bool activateVisual = false,
+			[ToolParameter(Description = "When true, stop the current path/job before posing.", Required = false, DefaultValue = true)] bool stopMovement = true,
+			[ToolParameter(Description = "When true, clear RimWorld selection and designator UI before returning.", Required = false, DefaultValue = true)] bool clearUiState = true)
+		{
+			if (TryGetPawnAndWeapon(pawnId, out var pawn, out var flamethrower, out var error) == false)
+				return error;
+			if (TryGetCell(cellX, cellZ, out var origin, out error) == false)
+				return error;
+			if (poseIndex < 1 || poseIndex > TankPipeAimSweep.Length)
+			{
+				return new
+				{
+					success = false,
+					error = $"Pose index {poseIndex} is outside the tank/pipe sweep range 1..{TankPipeAimSweep.Length}."
+				};
+			}
+
+			radius = Mathf.Clamp(radius, 1, 30);
+			halfRadius = Mathf.Clamp(halfRadius, 1, radius);
+			var pose = TankPipeAimSweep[poseIndex - 1];
+			if (TryParseRotation(pose.Rotation, out var rotation, out error) == false)
+				return error;
+
+			var targetCell = AimSweepTargetCell(pose, origin, radius, halfRadius);
+			if (TryGetCell(targetCell.x, targetCell.z, out targetCell, out error) == false)
+				return error;
+
+			var target = ApplyRenderPose(pawn, flamethrower, rotation, targetCell, draft, true, activateVisual, stopMovement, clearUiState);
+			return new
+			{
+				success = true,
+				poseIndex,
+				label = pose.Label,
+				origin = DescribeCell(origin),
+				radius,
+				halfRadius,
+				rotation = DescribeRotation(rotation),
+				target = DescribeTarget(target),
+				render = DescribeRenderState(pawn, flamethrower)
+			};
+		}
+
+		[Tool("zeflammenwerfer/render_tank_pipe_pose_sweep", Description = "Run the full 16-position tank/pipe screenshot evidence sweep from C#, using RimBridgeServer v2 async SDK calls for ticks and screenshots.")]
+		public static async Task<object> RenderTankPipePoseSweep(
+			IRimBridgeContext ctx,
+			CancellationToken cancellationToken,
+			[ToolParameter(Description = "When true, load the walkthrough save before capturing.", Required = false, DefaultValue = true)] bool loadGame = true,
+			[ToolParameter(Description = "Save to load when loadGame is true.", Required = false, DefaultValue = "zeflammenwerfer walkthrough")] string saveName = "zeflammenwerfer walkthrough",
+			[ToolParameter(Description = "Stable pawn id such as Thing_Human776.", Required = false, DefaultValue = "Thing_Human776")] string pawnId = "Thing_Human776",
+			[ToolParameter(Description = "Origin x coordinate, normally Rocha's occupied cell in the walkthrough save.", Required = false, DefaultValue = 117)] int cellX = 117,
+			[ToolParameter(Description = "Origin z coordinate, normally Rocha's occupied cell in the walkthrough save.", Required = false, DefaultValue = 114)] int cellZ = 114,
+			[ToolParameter(Description = "Far aim radius in cells.", Required = false, DefaultValue = 4)] int radius = 4,
+			[ToolParameter(Description = "Intermediate aim radius in cells.", Required = false, DefaultValue = 2)] int halfRadius = 2,
+			[ToolParameter(Description = "Screenshot padding in cells.", Required = false, DefaultValue = 2)] int paddingCells = 2,
+			[ToolParameter(Description = "Camera root size for close-up screenshot framing.", Required = false, DefaultValue = 2.5f)] float rootSize = 2.5f,
+			[ToolParameter(Description = "Paused deterministic ticks to advance after each pose.", Required = false, DefaultValue = 1)] int poseTicks = 1,
+			[ToolParameter(Description = "Prefix for generated screenshot file names.", Required = false, DefaultValue = "zef-tank-pipe")] string filePrefix = "zef-tank-pipe",
+			[ToolParameter(Description = "Optional caller-supplied run id included in the result.", Required = false, DefaultValue = "manual")] string runId = "manual")
+		{
+			if (ctx == null)
+			{
+				return new
+				{
+					success = false,
+					error = "RimBridge SDK context was not injected."
+				};
+			}
+
+			var screenshotTool = ctx.Tools.Get("rimworld/screenshot_cell_rect");
+			var capabilityProbe = ctx.Tools.List(new RimBridgeToolQuery { Text = "zeflammenwerfer/" });
+			object load = null;
+			if (loadGame)
+			{
+				var loadResult = await ctx.Tools.CallAsync("rimworld/load_game_ready", new
+				{
+					saveName,
+					readiness = "visual",
+					pauseIfNeeded = true,
+					timeoutMs = 120000
+				}, cancellationToken: cancellationToken);
+				load = loadResult.Result;
+				if (loadResult.Succeeded() == false)
+				{
+					return new
+					{
+						success = false,
+						error = "Loading the walkthrough save failed.",
+						load = loadResult
+					};
+				}
+			}
+
+			var sweep = ListTankPipePoseSweep(cellX, cellZ, radius, halfRadius);
+			var sweepResult = LocalResult(sweep);
+			if (sweepResult.Succeeded() == false)
+			{
+				return new
+				{
+					success = false,
+					error = "The tank/pipe pose sweep could not be created.",
+					sweep
+				};
+			}
+
+			await ctx.Tools.CallAsync("rimworld/clear_selection", cancellationToken: cancellationToken);
+			var captures = new List<object>();
+			for (var poseIndex = 1; poseIndex <= TankPipeAimSweep.Length; poseIndex++)
+			{
+				var pose = SetTankPipePose(
+					poseIndex,
+					pawnId,
+					cellX,
+					cellZ,
+					radius,
+					halfRadius,
+					draft: true,
+					activateVisual: false,
+					stopMovement: true,
+					clearUiState: true);
+				var poseResult = LocalResult(pose);
+				if (poseResult.Succeeded() == false)
+				{
+					return new
+					{
+						success = false,
+						error = $"Pose {poseIndex} failed.",
+						pose,
+						captures = captures.ToArray()
+					};
+				}
+
+				var tick = await ctx.Game.StepTicksAsync(poseTicks, new RimBridgeTickOptions
+				{
+					TimeoutMs = 10000,
+					PauseFirst = true
+				}, cancellationToken: cancellationToken);
+				if (tick.Success == false)
+				{
+					return new
+					{
+						success = false,
+						error = $"Tick advancement after pose {poseIndex} failed.",
+						pose,
+						tick,
+						captures = captures.ToArray()
+					};
+				}
+
+				var label = poseResult.TryReadResult<string>(out var poseLabel, "label") ? poseLabel : TankPipeAimSweep[poseIndex - 1].Label;
+				var shot = await ctx.Tools.CallAsync("rimworld/screenshot_cell_rect", new
+				{
+					x = cellX,
+					z = cellZ,
+					width = 1,
+					height = 1,
+					paddingCells,
+					rootSize,
+					fileName = $"{filePrefix}-{label}",
+					suppressMessage = true
+				}, cancellationToken: cancellationToken);
+				if (shot.Succeeded() == false)
+				{
+					return new
+					{
+						success = false,
+						error = $"Screenshot capture after pose {poseIndex} failed.",
+						pose,
+						tick,
+						screenshot = shot,
+						captures = captures.ToArray()
+					};
+				}
+
+				captures.Add(new
+				{
+					label,
+					pose,
+					tick,
+					screenshot = shot.Result
+				});
+			}
+
+			var cleanup = ClearFireTarget(pawnId, repathCurrentMove: false);
+			var reset = SetRenderPose(
+				pawnId,
+				rotation: "south",
+				draft: true,
+				setManualTarget: false,
+				activateVisual: false,
+				stopMovement: false,
+				clearUiState: true);
+			await ctx.Tools.CallAsync("rimworld/clear_selection", cancellationToken: cancellationToken);
+
+			return new
+			{
+				success = true,
+				suite = "tank-pipe-16-aims-sdk",
+				runId,
+				pawnId,
+				saveName,
+				load,
+				sweep,
+				requestedRect = new
+				{
+					x = cellX,
+					z = cellZ,
+					width = 1,
+					height = 1,
+					paddingCells,
+					rootSize
+				},
+				toolQuery = new
+				{
+					screenshotTool = screenshotTool.Id,
+					matchingCapabilityCount = capabilityProbe.Count
+				},
+				cleanup,
+				reset,
+				captures = captures.ToArray()
 			};
 		}
 

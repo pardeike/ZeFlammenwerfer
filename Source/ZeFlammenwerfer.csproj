@@ -38,6 +38,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<Compile Remove="ZeFlammenwerferBridgeTools.cs" />
+		<Compile Remove="BridgeTools\**\*.cs" />
+		<None Include="BridgeTools\**\*" />
 		<Content Include="..\Directory.Build.props">
 			<Link>%(Filename)%(Extension)</Link>
 		</Content>
@@ -70,7 +73,6 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="RimBridgeServer.Annotations" Version="1.2.0" GeneratePathProperty="true" />
 		<PackageReference Include="TaskPubliciser" Version="1.0.3" />
 	</ItemGroup>
 
@@ -100,13 +102,16 @@
 		</ItemGroup>
 	</Target>
 
-	<Target Name="CopyRimBridgeAnnotations" AfterTargets="Build">
-		<Copy SourceFiles="$(PkgRimBridgeServer_Annotations)\lib\net472\RimBridgeServer.Annotations.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(PkgRimBridgeServer_Annotations)\lib\net472\RimBridgeServer.Annotations.dll')" />
-	</Target>
-
-	<Target Name="PostBuildAction" AfterTargets="CopyRimBridgeAnnotations">
+	<Target Name="PostBuildAction" AfterTargets="Build">
 		<XmlPoke XmlInputPath="$(MSBuildProjectDirectory)\..\About\About.xml" Query="//ModMetaData/modVersion" Value="$(ModVersion)" />
 		<XmlPoke XmlInputPath="$(MSBuildProjectDirectory)\..\About\Manifest.xml" Query="//Manifest/version" Value="$(ModVersion)" />
+	</Target>
+
+	<Target Name="BuildBridgeTools" AfterTargets="PostBuildAction" BeforeTargets="CopyToRimworld">
+		<MSBuild
+			Projects="$(MSBuildProjectDirectory)\BridgeTools\ZeFlammenwerfer.BridgeTools.csproj"
+			Targets="Restore;Build"
+			Properties="Configuration=$(Configuration);Platform=$(Platform);ZeFlammenwerferAssemblyPath=$(TargetPath)" />
 	</Target>
 
 	<Target Name="CopyToRimworld" AfterTargets="PostBuildAction" Condition="'$(RIMWORLD_MOD_DIR)' != ''">

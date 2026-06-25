@@ -36,7 +36,7 @@ When publishing a new version, update `ModVersion` in `Directory.Build.props`, r
 - `About/About.xml`
 - `About/Manifest.xml`
 - `1.6/Assemblies/ZeFlammenwerfer.dll`
-- `1.6/Assemblies/RimBridgeServer.Annotations.dll`, if the dependency changed
+- `1.6/BridgeTools/ZeFlammenwerfer.BridgeTools.dll`
 - `Resources/flamethrower-*`, if asset bundles changed
 
 For ordinary source-only development commits, restore generated assemblies before committing unless the commit is intentionally release-related.

@@ -8,7 +8,7 @@ using Verse.AI;
 
 namespace ZeFlammenwerfer
 {
-	static class FlameDangerTracker
+	public static class FlameDangerTracker
 	{
 		const bool renderDebugCells = false;
 		const ushort flameCoreCellCost = 10000;

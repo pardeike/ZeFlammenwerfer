@@ -75,3 +75,30 @@ Use `summarize-rimworld-log.sh` to deduplicate RimWorld error blocks:
 ```bash
 ./scripts/summarize-rimworld-log.sh "$HOME/Library/Logs/Unity/Player.log"
 ```
+
+## RimBridge Evidence Suites
+
+Use `run-tank-pipe-evidence.sh` to run the RimBridge companion-tool suite that poses Rocha against 16 aim targets around his occupied cell and captures 16 close-up `rimworld/screenshot_cell_rect` images of the tank and pipe rendering:
+
+```bash
+./scripts/run-tank-pipe-evidence.sh
+```
+
+The suite requests a `1x1` cell rect for Rocha's cell and defaults to `paddingCells=2` plus `rootSize=2.5` for detailed pawn/equipment captures. The screenshot tool still owns its own framing and crop safety.
+
+The wrapper copies `Originals/zeflammenwerfer walkthrough.rws` into the configured RimWorld save folder before running the companion tool. Override paths and game identity with environment variables:
+
+```bash
+RIMWORLD_SAVE_DIR="/path/to/UserData/Saves" \
+GABS_BIN="/path/to/gabs" \
+GABS_GAME_ID="rimworld-direct" \
+./scripts/run-tank-pipe-evidence.sh --force-takeover
+```
+
+Generated evidence is copied into:
+
+```text
+artifacts/rimbridge-evidence/tank-pipe-16-aims-sdk/<run-id>/
+```
+
+The authoritative in-game sequence lives in the companion tool `zeflammenwerfer/render_tank_pipe_pose_sweep`; the shell/Node launcher only starts GABS, calls that tool, and collects the screenshot files plus JSON manifest. The tool uses RimBridgeServer v2 SDK calls to query/call bridge tools and await real game ticks from C#.

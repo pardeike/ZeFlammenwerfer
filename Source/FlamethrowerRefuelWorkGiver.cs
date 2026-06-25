@@ -25,7 +25,7 @@ namespace ZeFlammenwerfer
 		}
 	}
 
-	static class FlamethrowerRefuelUtility
+	public static class FlamethrowerRefuelUtility
 	{
 		static readonly MethodInfo findBestFuelMethod = AccessTools.DeclaredMethod(typeof(RefuelWorkGiverUtility), "FindBestFuel");
 		static readonly MethodInfo findAllFuelMethod = AccessTools.DeclaredMethod(typeof(RefuelWorkGiverUtility), "FindAllFuel");

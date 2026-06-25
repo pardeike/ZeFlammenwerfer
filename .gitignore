@@ -43,7 +43,6 @@ dlldata.c
 
 # DNX
 project.lock.json
-artifacts/
 
 *_i.c
 *_p.c
@@ -82,6 +81,7 @@ Originals/FlameThrowerUnity_2022BuildProbe_*/
 *.vspscc
 *.vssscc
 .builds
+artifacts/
 *.pidb
 *.svclog
 *.scc
