@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -29,6 +30,23 @@ public class CreateAssetBundles
 		"Assets/Smoke.prefab",
 		"Assets/T_Smoke.psd",
 	};
+	static readonly string[] ExpectedAssetNames =
+	{
+		"assets/fire.prefab",
+		"assets/smoke.prefab",
+		"assets/blockcube.prefab",
+		"assets/fireblock.shader",
+		"assets/particleunlit.shader",
+	};
+
+	static string DeploymentDir(string modRoot)
+	{
+		var env = System.Environment.GetEnvironmentVariable("ZEFLAMMENWERFER_RESOURCES_DIR");
+		if (string.IsNullOrEmpty(env) == false)
+			return env;
+
+		return Path.Combine(modRoot, "Resources");
+	}
 
 	[MenuItem("Assets/Build Standalone AssetBundles")]
 	public static void BuildStandaloneAssetBundles()
@@ -47,8 +65,30 @@ public class CreateAssetBundles
 		if (BuildAndDeployAssetBundle(buildTarget))
 		{
 			AssetDatabase.Refresh();
-			EditorUtility.RevealInFinder(Path.Combine(FindModRoot(Directory.GetParent(Application.dataPath).FullName), "Resources"));
+			if (Application.isBatchMode == false)
+				EditorUtility.RevealInFinder(DeploymentDir(FindModRoot(Directory.GetParent(Application.dataPath).FullName)));
 		}
+	}
+
+	[MenuItem("Assets/Build Current Platform AssetBundle")]
+	public static void BuildCurrentMachineAssetBundle()
+	{
+		BuildAndDeployAssetBundle(CurrentBuildTarget());
+	}
+
+	public static void BuildWin64AssetBundle()
+	{
+		BuildAndDeployAssetBundle(BuildTarget.StandaloneWindows64);
+	}
+
+	public static void BuildLinuxAssetBundle()
+	{
+		BuildAndDeployAssetBundle(BuildTarget.StandaloneLinux64);
+	}
+
+	public static void BuildMacOSAssetBundle()
+	{
+		BuildAndDeployAssetBundle(BuildTarget.StandaloneOSX);
 	}
 
 	[MenuItem("Assets/Build All Standalone AssetBundles")]
@@ -76,7 +116,8 @@ public class CreateAssetBundles
 		}
 
 		AssetDatabase.Refresh();
-		EditorUtility.RevealInFinder(Path.Combine(modRoot, "Resources"));
+		if (Application.isBatchMode == false)
+			EditorUtility.RevealInFinder(DeploymentDir(modRoot));
 	}
 
 	static bool BuildAndDeployAssetBundle(BuildTarget buildTarget)
@@ -119,10 +160,11 @@ public class CreateAssetBundles
 			return false;
 		}
 
-		var resourcesDirectory = Path.Combine(modRoot, "Resources");
+		var resourcesDirectory = DeploymentDir(modRoot);
 		PreBuildDirectoryCheck(resourcesDirectory);
 		var deployedBundlePath = Path.Combine(resourcesDirectory, bundleFileName);
 		File.Copy(builtBundlePath, deployedBundlePath, true);
+		ValidateBundle(GetArchitectureName(buildTarget), deployedBundlePath);
 
 		Debug.Log($"AssetBundle '{bundleFileName}' for {buildTarget} built to: {builtBundlePath}");
 		Debug.Log($"Deployed AssetBundle to: {deployedBundlePath}");
@@ -174,6 +216,65 @@ public class CreateAssetBundles
 	static bool IsSupportedStandaloneTarget(BuildTarget buildTarget)
 	{
 		return GetBundleFileName(buildTarget) != null;
+	}
+
+	static BuildTarget CurrentBuildTarget()
+	{
+		switch (Application.platform)
+		{
+			case RuntimePlatform.WindowsEditor:
+				return BuildTarget.StandaloneWindows64;
+			case RuntimePlatform.LinuxEditor:
+				return BuildTarget.StandaloneLinux64;
+			case RuntimePlatform.OSXEditor:
+				return BuildTarget.StandaloneOSX;
+			default:
+				throw new System.Exception($"Unsupported Unity editor platform for Ze Flammenwerfer asset bundle build: {Application.platform}");
+		}
+	}
+
+	static string GetArchitectureName(BuildTarget buildTarget)
+	{
+		switch (buildTarget)
+		{
+			case BuildTarget.StandaloneWindows64:
+				return "Win64";
+			case BuildTarget.StandaloneLinux64:
+				return "Linux";
+			case BuildTarget.StandaloneOSX:
+				return "MacOS";
+			default:
+				return buildTarget.ToString();
+		}
+	}
+
+	static void ValidateBundle(string arch, string path)
+	{
+		var bundle = AssetBundle.LoadFromFile(path);
+		if (bundle == null)
+			throw new System.Exception($"Could not load asset bundle {path}");
+
+		var actualNames = new HashSet<string>(bundle.GetAllAssetNames());
+		var missingNames = ExpectedAssetNames.Where(name => actualNames.Contains(name) == false).ToArray();
+		if (missingNames.Length > 0)
+			throw new System.Exception($"Ze Flammenwerfer bundle {arch} is missing assets: {string.Join(", ", missingNames)}");
+
+		var fire = RequireAsset<GameObject>(bundle, arch, ExpectedAssetNames[0]);
+		var smoke = RequireAsset<GameObject>(bundle, arch, ExpectedAssetNames[1]);
+		var blockCube = RequireAsset<GameObject>(bundle, arch, ExpectedAssetNames[2]);
+		var fireBlock = RequireAsset<Shader>(bundle, arch, ExpectedAssetNames[3]);
+		var particleUnlit = RequireAsset<Shader>(bundle, arch, ExpectedAssetNames[4]);
+
+		Debug.Log($"Ze Flammenwerfer bundle validated {arch}: Fire={fire.name}, Smoke={smoke.name}, BlockCube={blockCube.name}, FireBlock={fireBlock.name}, ParticleUnlit={particleUnlit.name}, assets={actualNames.Count}, Unity={Application.unityVersion}, path={path}");
+		bundle.Unload(false);
+	}
+
+	static T RequireAsset<T>(AssetBundle bundle, string arch, string assetName) where T : UnityEngine.Object
+	{
+		var asset = bundle.LoadAsset<T>(assetName);
+		if (asset == null)
+			throw new System.Exception($"Ze Flammenwerfer bundle {arch} could not load {assetName} as {typeof(T).Name}");
+		return asset;
 	}
 
 	static string GetBundleFileName(BuildTarget buildTarget)

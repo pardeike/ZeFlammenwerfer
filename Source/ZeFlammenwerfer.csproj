@@ -4,7 +4,7 @@
 		<RootNamespace>$(ModFileName)</RootNamespace>
 		<AssemblyName>$(ModFileName)</AssemblyName>
 		<TargetFramework>net472</TargetFramework>
-		<LangVersion>preview</LangVersion>
+		<LangVersion>latest</LangVersion>
 		<PlatformTarget>x64</PlatformTarget>
 		<OutputPath>..\1.6\Assemblies\</OutputPath>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -33,7 +33,7 @@
 		<DebugSymbols>true</DebugSymbols>
 		<DefineConstants>RW12;RW13;TRACE;DEBUG</DefineConstants>
 		<Optimize>false</Optimize>
-		<DebugType>embedded</DebugType>
+		<DebugType>portable</DebugType>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 
@@ -41,24 +41,36 @@
 		<Content Include="..\Directory.Build.props">
 			<Link>%(Filename)%(Extension)</Link>
 		</Content>
+		<Content Include="..\About\**\*">
+			<Link>About\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		</Content>
 		<Content Include="..\Defs\**\*.xml">
 			<Link>Defs\%(RecursiveDir)%(Filename)%(Extension)</Link>
 		</Content>
-		<Content Include="..\Languages\**\Keyed\*.xml">
-			<Link>Languages\%(RecursiveDir)%(FileName)%(Extension)</Link>
+		<Content Include="..\1.6\Defs\**\*.xml">
+			<Link>1.6\Defs\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		</Content>
+		<Content Include="..\Resources\**\*">
+			<Link>Resources\%(RecursiveDir)%(FileName)%(Extension)</Link>
+		</Content>
+		<Content Include="..\Sounds\**\*">
+			<Link>Sounds\%(RecursiveDir)%(FileName)%(Extension)</Link>
+		</Content>
+		<Content Include="..\Textures\**\*">
+			<Link>Textures\%(RecursiveDir)%(FileName)%(Extension)</Link>
 		</Content>
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Brrainz.RimWorld.CrossPromotion" Version="1.1.2" />
-		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4566" GeneratePathProperty="true" />
-		<PackageReference Include="Lib.Harmony.Ref" Version="2.4.1" />
+		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4850" GeneratePathProperty="true" />
+		<PackageReference Include="Lib.Harmony" Version="2.4.2" ExcludeAssets="runtime" />
 		<PackageReference Include="Microsoft.NETCore.Platforms" Version="7.0.4" />
 		<PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="RimBridgeServer.Annotations" Version="1.0.0" GeneratePathProperty="true" />
+		<PackageReference Include="RimBridgeServer.Annotations" Version="1.2.0" GeneratePathProperty="true" />
 		<PackageReference Include="TaskPubliciser" Version="1.0.3" />
 	</ItemGroup>
 
@@ -98,6 +110,7 @@
 	</Target>
 
 	<Target Name="CopyToRimworld" AfterTargets="PostBuildAction" Condition="'$(RIMWORLD_MOD_DIR)' != ''">
+		<Delete Files="..\1.6\Assemblies\0Harmony.dll" />
 		<RemoveDir Directories="$(RIMWORLD_MOD_DIR)\$(ModFileName)" />
 		<ItemGroup>
 			<Copy_14 Include="..\1.4\**" />
@@ -109,7 +122,7 @@
 			<CopyTextures Include="..\Textures\**" />
 			<CopyLicense Include="..\LICENSE" />
 			<CopyLoadFolders Include="..\LoadFolders.xml" />
-			<CopyReadme Include="..\Readme.md" />
+			<CopyReadme Include="..\README.md" />
 		</ItemGroup>
 		<Copy SourceFiles="@(Copy_14)" DestinationFolder="$(RIMWORLD_MOD_DIR)\$(ModFileName)\1.4\%(RecursiveDir)" />
 		<Copy SourceFiles="@(Copy_16)" DestinationFolder="$(RIMWORLD_MOD_DIR)\$(ModFileName)\1.6\%(RecursiveDir)" />
