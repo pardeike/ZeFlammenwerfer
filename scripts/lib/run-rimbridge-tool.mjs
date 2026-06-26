@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, copyFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, copyFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
@@ -70,13 +70,35 @@ function collectEvidencePngPaths(result) {
   if (Array.isArray(result?.captures)) {
     const capturePaths = new Set();
     for (const capture of result.captures) {
-      const path = capture?.screenshot?.path;
-      if (typeof path === "string" && path.endsWith(".png") && existsSync(path)) capturePaths.add(path);
+      const screenshot = capture?.screenshot;
+      const sourcePath = screenshot?.sourcePath;
+      const path = screenshot?.path;
+      if (typeof sourcePath === "string" && sourcePath.endsWith(".png") && existsSync(sourcePath)) {
+        capturePaths.add(sourcePath);
+      } else if (typeof path === "string" && path.endsWith(".png") && existsSync(path)) {
+        capturePaths.add(path);
+      }
     }
     if (capturePaths.size > 0) return capturePaths;
   }
 
   return collectPngPaths(result);
+}
+
+function collectDerivedScreenshotPaths(result, filePrefix) {
+  const paths = new Set();
+  if (Array.isArray(result?.captures) === false) return paths;
+
+  for (const capture of result.captures) {
+    const screenshot = capture?.screenshot;
+    const sourcePath = screenshot?.sourcePath;
+    const path = screenshot?.path;
+    if (typeof sourcePath !== "string" || typeof path !== "string") continue;
+    if (sourcePath === path || path.endsWith(".png") === false || existsSync(path) === false) continue;
+    const name = basename(path);
+    if (name.startsWith(filePrefix) && name.includes("__cell_rect")) paths.add(path);
+  }
+  return paths;
 }
 
 async function waitForGameTool(client, gameId, toolName, timeoutSeconds, forceTakeover) {
@@ -233,7 +255,8 @@ try {
     toolName,
     parameters,
     result,
-    copiedImages: []
+    copiedImages: [],
+    deletedDerivedImages: []
   };
 
   for (const pngPath of collectEvidencePngPaths(result)) {
@@ -243,6 +266,22 @@ try {
       source: pngPath,
       copiedTo: target
     });
+  }
+
+  for (const pngPath of collectDerivedScreenshotPaths(result, parameters.filePrefix)) {
+    try {
+      unlinkSync(pngPath);
+      manifest.deletedDerivedImages.push({
+        source: pngPath,
+        deleted: true
+      });
+    } catch (error) {
+      manifest.deletedDerivedImages.push({
+        source: pngPath,
+        deleted: false,
+        error: String(error?.message || error)
+      });
+    }
   }
 
   const manifestPath = join(outDir, "manifest.json");

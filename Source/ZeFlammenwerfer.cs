@@ -43,16 +43,13 @@ namespace ZeFlammenwerfer
 			TryRestoreVisualAfterLoad();
 			if (CanFireNow == false)
 			{
-				ClearManualTarget();
-				flameComp.SetActive(false);
-				FlameDangerTracker.Clear(pawn);
+				ClearManualTargetVisuals();
 				return;
 			}
 			if (pawn == null)
 			{
-				ClearManualTarget();
+				ClearManualTargetVisuals();
 				DebugTrace.LogThrottled($"missing-pawn-{ThingID}", 300, $"{ThingID} lost its owning pawn while ticking");
-				flameComp.SetActive(false);
 				return;
 			}
 			ForcePendingManualRepath();
@@ -169,9 +166,7 @@ namespace ZeFlammenwerfer
 		{
 			if (SameTarget(manualTarget, target))
 			{
-				ClearManualTarget();
-				flameComp?.SetActive(false);
-				FlameDangerTracker.Clear(pawn);
+				ClearManualTargetVisuals();
 				return;
 			}
 
@@ -180,6 +175,7 @@ namespace ZeFlammenwerfer
 			manualWarmupUntilTick = GenTicks.TicksGame + warmupTicks;
 			nextManualShotTick = manualWarmupUntilTick;
 			manualTargetRepathPending = true;
+			FaceManualTargetNow(target);
 		}
 
 		public void ClearManualTarget()
@@ -188,6 +184,15 @@ namespace ZeFlammenwerfer
 			manualWarmupUntilTick = int.MinValue;
 			nextManualShotTick = int.MinValue;
 			manualTargetRepathPending = false;
+		}
+
+		public void ClearManualTargetVisuals()
+		{
+			ClearManualTarget();
+			flameComp?.SetActive(false);
+			flameComp?.SetPipeActive(false);
+			FlameDangerTracker.Clear(pawn);
+			PawnFacingUtility.MarkGraphicsDirty(pawn);
 		}
 
 		public bool TryForceCurrentMoveRepath()
@@ -211,17 +216,13 @@ namespace ZeFlammenwerfer
 		{
 			if (pawn.Spawned == false || pawn.Map == null || pawn.Drafted == false || pawn.Dead || pawn.Downed)
 			{
-				ClearManualTarget();
-				flameComp.SetActive(false);
-				FlameDangerTracker.Clear(pawn);
+				ClearManualTargetVisuals();
 				return;
 			}
 
 			if (manualTarget.HasThing && (manualTarget.Thing.DestroyedOrNull() || manualTarget.Thing.Spawned == false || manualTarget.Thing.Map != pawn.Map))
 			{
-				ClearManualTarget();
-				flameComp.SetActive(false);
-				FlameDangerTracker.Clear(pawn);
+				ClearManualTargetVisuals();
 				return;
 			}
 
@@ -299,6 +300,33 @@ namespace ZeFlammenwerfer
 			if (TryForceCurrentMoveRepath() == false)
 				return;
 			manualTargetRepathPending = false;
+		}
+
+		void FaceManualTargetNow(LocalTargetInfo target)
+		{
+			if (target.IsValid == false || PawnFacingUtility.CanRotateNow(pawn) == false)
+				return;
+
+			Vector3 targetPos;
+			if (target.HasThing)
+			{
+				var thing = target.Thing.Spawned ? target.Thing : ThingOwnerUtility.GetFirstSpawnedParentThing(target.Thing);
+				if (thing == null || thing.Spawned == false || thing.Map != pawn.Map)
+					return;
+				targetPos = thing.DrawPos;
+			}
+			else
+			{
+				if (target.Cell.IsValid == false || target.Cell.InBounds(pawn.Map) == false)
+					return;
+				targetPos = target.Cell.ToVector3Shifted();
+			}
+
+			if ((targetPos - pawn.DrawPos).MagnitudeHorizontalSquared() <= 0.001f)
+				return;
+
+			pawn.rotationTracker?.Face(targetPos);
+			PawnFacingUtility.MarkGraphicsDirty(pawn);
 		}
 
 		void TryRestoreVisualAfterLoad()

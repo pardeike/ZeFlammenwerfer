@@ -26,11 +26,15 @@ namespace ZeFlammenwerfer
 
 		public static HashSet<ParticleSystem> allParticleSystems = new();
 
-		public static readonly Vector3 vSpacer = new(0, 0.01f, 0);
+		public static readonly Vector3 vSpacer = new(0, 0.00035f, 0);
 		public static readonly Vector3 p1HandleLeft = new(-0.15f, 0f, -0.08f);
 		public static readonly Vector3 p1HandleRight = new(0.15f, 0f, -0.08f);
 		public static readonly Vector3 p2HandleLeft = new(-0.15f, 0f, 0.07f);
 		public static readonly Vector3 p2HandleRight = new(0.15f, 0f, 0.07f);
+		const float tankFrontVisualLayer = PawnRenderUtility.Layer_Carried - 4f;
+		const float pipeFrontVisualLayer = PawnRenderUtility.Layer_Carried - 2f;
+		const float tankBackVisualLayer = PawnRenderUtility.Layer_Carried + 8f;
+		const float pipeBackVisualLayer = PawnRenderUtility.Layer_Carried + 10f;
 
 		public static Vector3[] tankOffset = new[]
 		{
@@ -39,6 +43,28 @@ namespace ZeFlammenwerfer
 			new Vector3(-0.35f, 0, 0),
 			new Vector3(0.3f, 0, 0)
 		};
+
+		static float CurrentEquipmentLayerFor(Rot4 facing)
+		{
+			return facing == Rot4.North ? PawnRenderUtility.Layer_Carried_Behind : PawnRenderUtility.Layer_Carried;
+		}
+
+		public static Vector3 MoveFromEquipmentLayer(Vector3 drawPos, Rot4 facing, float targetLayer)
+		{
+			return drawPos.WithYOffset(PawnRenderUtility.AltitudeForLayer(targetLayer) - PawnRenderUtility.AltitudeForLayer(CurrentEquipmentLayerFor(facing)));
+		}
+
+		public static Vector3 TankDrawPosition(Vector3 equipmentBaseDrawPos, Rot4 facing)
+		{
+			var layer = facing == Rot4.North ? tankBackVisualLayer : tankFrontVisualLayer;
+			return MoveFromEquipmentLayer(equipmentBaseDrawPos, facing, layer) + tankOffset[facing.AsInt];
+		}
+
+		static Vector3 PipeDrawPosition(Vector3 equipmentBaseDrawPos, Rot4 facing)
+		{
+			var layer = facing == Rot4.North ? pipeBackVisualLayer : pipeFrontVisualLayer;
+			return MoveFromEquipmentLayer(equipmentBaseDrawPos, facing, layer);
+		}
 
 		public override void Initialize(CompProperties props)
 		{
@@ -194,36 +220,42 @@ namespace ZeFlammenwerfer
 
 		public void UpdateDrawPos(Pawn pawn)
 		{
+			if (pawn == null)
+				return;
+
+			var equipmentLayer = CurrentEquipmentLayerFor(pawn.Rotation);
+			UpdateDrawPos(pawn, pawn.DrawPos.WithYOffset(PawnRenderUtility.AltitudeForLayer(equipmentLayer)), pawn.Rotation, PawnRenderFlags.None);
+		}
+
+		public void UpdateDrawPos(Pawn pawn, Vector3 equipmentBaseDrawPos, Rot4 renderFacing, PawnRenderFlags flags)
+		{
 			if (pawn == null || fire == null)
 				return;
 
-			var (center, angle) = WeaponTool.GetAimingCenter(pawn);
-			if (angle == int.MinValue)
+			if (WeaponTool.TryGetAimingData(pawn, equipmentBaseDrawPos, flags, out var aiming, includeRecoil: true) == false)
 			{
 				if (isActive == false)
 					SetPipeActive(false);
 				return;
 			}
 
-			var drawPos = pawn.DrawPos;
-			var orientation = pawn.Rotation;
+			var orientation = renderFacing;
 			Vector3 control;
-			var flipped = WeaponTool.IsFlipped(angle);
+			var flipped = WeaponTool.IsFlipped(aiming.AimAngle);
 
-			curveInner.transform.position = drawPos;
-			curveOuter.transform.position = drawPos;
-			SetPipeActive(pawn.Rotation != Rot4.North);
+			curveInner.transform.position = equipmentBaseDrawPos;
+			curveOuter.transform.position = equipmentBaseDrawPos;
+			SetPipeActive(true);
 
-			var tankOutputPoint = drawPos + tankOffset[pawn.Rotation.AsInt] + new Vector3(0, 0, 0.25f) + vSpacer;
-			tankOutputPoint.y += PawnRenderer_RenderPawnInternal_Patch.magicOffset + (orientation == Rot4.North ? Altitudes.AltInc : -Altitudes.AltInc / 12f);
+			var tankOutputPoint = PipeDrawPosition(equipmentBaseDrawPos, orientation) + tankOffset[orientation.AsInt] + new Vector3(0, 0, 0.25f) + vSpacer;
 
 			pointsInner[0].PositionWorld = tankOutputPoint + vSpacer;
 			pointsOuter[0].PositionWorld = tankOutputPoint;
-			control = tankOutputPoint + (pawn.Rotation != Rot4.West ? p1HandleLeft : p1HandleRight);
+			control = tankOutputPoint + (orientation != Rot4.West ? p1HandleLeft : p1HandleRight);
 			pointsInner[0].ControlSecondWorld = control + vSpacer;
 			pointsOuter[0].ControlSecondWorld = control;
 
-			var gunInputPoint = center + new Vector3(-0.5f, 0, flipped ? -0.028f : 0.028f).RotatedBy(angle - 90) + vSpacer;
+			var gunInputPoint = PipeDrawPosition(aiming.DrawPos, orientation) + new Vector3(-0.5f, 0, flipped ? -0.028f : 0.028f).RotatedBy(aiming.AimAngle - 90) + vSpacer;
 
 			pointsInner[1].PositionWorld = gunInputPoint + vSpacer;
 			pointsOuter[1].PositionWorld = gunInputPoint;

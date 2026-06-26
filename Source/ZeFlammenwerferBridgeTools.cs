@@ -38,7 +38,7 @@ namespace ZeFlammenwerfer
 			new("04-east-northeast", "east", 2, 1),
 			new("05-east", "east", 2, 0),
 			new("06-east-southeast", "east", 2, -1),
-			new("07-southeast", "south", 2, -2),
+			new("07-southeast", "east", 2, -2),
 			new("08-south-southeast", "south", 1, -2),
 			new("09-south", "south", 0, -2),
 			new("10-south-southwest", "south", -1, -2),
@@ -46,7 +46,7 @@ namespace ZeFlammenwerfer
 			new("12-west-southwest", "west", -2, -1),
 			new("13-west", "west", -2, 0),
 			new("14-west-northwest", "west", -2, 1),
-			new("15-northwest", "north", -2, 2),
+			new("15-northwest", "west", -2, 2),
 			new("16-north-northwest", "north", -1, 2)
 		};
 
@@ -1169,9 +1169,7 @@ namespace ZeFlammenwerfer
 
 			if (flamethrower.CanFireNow == false)
 			{
-				flamethrower.ClearManualTarget();
-				flamethrower.flameComp?.SetActive(false);
-				FlameDangerTracker.Clear(pawn);
+				flamethrower.ClearManualTargetVisuals();
 			}
 
 			return new
@@ -1487,9 +1485,7 @@ namespace ZeFlammenwerfer
 			if (TryGetPawnAndWeapon(pawnId, out var pawn, out var flamethrower, out var error) == false)
 				return error;
 
-			flamethrower.ClearManualTarget();
-			flamethrower.flameComp?.SetActive(false);
-			FlameDangerTracker.Clear(pawn);
+			flamethrower.ClearManualTargetVisuals();
 
 			var immediateRepathApplied = repathCurrentMove && flamethrower.TryForceCurrentMoveRepath();
 			return DescribeState(pawn, flamethrower, immediateRepathApplied);

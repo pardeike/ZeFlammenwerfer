@@ -18,7 +18,8 @@ What it does:
 - Loads the `zeflammenwerfer walkthrough` save to visual readiness.
 - Poses Rocha with 16 aim targets around his occupied cell using the mod-owned `zeflammenwerfer/set_tank_pipe_pose` tool.
 - Captures each pose with `rimworld/screenshot_cell_rect`.
-- Copies the generated PNG files and a `manifest.json` into `artifacts/rimbridge-evidence/tank-pipe-16-aims-sdk/<run-id>/`.
+- Copies one raw source PNG per pose and a `manifest.json` into `artifacts/rimbridge-evidence/tank-pipe-16-aims-sdk/<run-id>/`.
+- Removes the temporary `__cell_rect` crop files that RimBridge creates beside the raw screenshots for this suite.
 
 The screenshot request is intentionally narrow:
 
@@ -31,7 +32,7 @@ paddingCells = 2
 rootSize = 2.5
 ```
 
-That means the evidence target is Rocha's single occupied cell. RimBridge's cell-rect screenshot tool provides the crop and safe framing around that cell.
+That means the evidence target is Rocha's single occupied cell. RimBridge's cell-rect screenshot tool provides safe framing around that cell; the repo evidence wrapper keeps the raw framed source image rather than the derived crop.
 
 The pose sweep is intentionally in C#, not hard-coded as Lua target-cell math. Use `zeflammenwerfer/list_tank_pipe_pose_sweep` to inspect the current 16-pose definition, `zeflammenwerfer/set_tank_pipe_pose` to apply one pose by one-based index, or `zeflammenwerfer/render_tank_pipe_pose_sweep` to run the full async screenshot harness.
 

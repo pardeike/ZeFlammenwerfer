@@ -50,29 +50,89 @@ namespace ZeFlammenwerfer
 		}
 	}
 
+	static class PawnFacingUtility
+	{
+		public static bool CanRotateNow(Pawn pawn)
+		{
+			if (pawn == null || pawn.Destroyed || pawn.Spawned == false || pawn.Map == null)
+				return false;
+			if (pawn.kindDef?.useFixedRotation == true)
+				return false;
+			if (pawn.stances?.stunner?.Stunned == true && pawn.stances.stunner.DisableRotation)
+				return false;
+			return true;
+		}
+
+		public static void FaceSouthNow(Pawn pawn)
+		{
+			if (CanRotateNow(pawn) == false)
+				return;
+
+			pawn.Rotation = Rot4.South;
+			MarkGraphicsDirty(pawn);
+		}
+
+		public static void MarkGraphicsDirty(Pawn pawn)
+		{
+			pawn?.Drawer?.renderer?.SetAllGraphicsDirty();
+		}
+	}
+
+	[HarmonyPatch(typeof(Pawn_DraftController), nameof(Pawn_DraftController.Drafted), MethodType.Setter)]
+	public static class Pawn_DraftController_Drafted_Patch
+	{
+		public static void Prefix(Pawn_DraftController __instance, out bool __state)
+		{
+			__state = __instance?.Drafted == true;
+		}
+
+		public static void Postfix(Pawn ___pawn, bool value, bool __state)
+		{
+			if (value == __state)
+				return;
+
+			if (___pawn?.equipment?.Primary is ZeFlammenwerfer flamethrower)
+				flamethrower.ClearManualTargetVisuals();
+
+			if (value)
+				PawnFacingUtility.FaceSouthNow(___pawn);
+		}
+	}
+
 	// draw tank and pipe
 	//
 	[HarmonyPatch(typeof(PawnRenderUtility), nameof(PawnRenderUtility.DrawEquipmentAndApparelExtras))]
 	public static class PawnRenderer_RenderPawnInternal_Patch
 	{
-		public const float magicOffset = 0.008687258f;
+		public static bool Prefix(Pawn pawn, Vector3 drawPos, PawnRenderFlags flags)
+		{
+			if (pawn?.equipment?.Primary is not ZeFlammenwerfer flamethrower || flamethrower.HasManualTarget == false)
+				return true;
+			if (WeaponTool.TryGetAimingData(pawn, drawPos, flags, out var aiming, includeRecoil: false) == false)
+				return true;
 
-		public static void Postfix(Pawn pawn, Vector3 drawPos, Rot4 facing)
+			PawnRenderUtility.DrawEquipmentAiming(flamethrower, aiming.DrawPos, aiming.AimAngle);
+			if (pawn.apparel != null)
+				foreach (var apparel in pawn.apparel.WornApparel)
+					apparel.DrawWornExtras();
+			return false;
+		}
+
+		public static void Postfix(Pawn pawn, Vector3 drawPos, Rot4 facing, PawnRenderFlags flags)
 		{
 			if (pawn.Downed || pawn.Dead)
 				return;
-			if (pawn.HasFlameThrower() == false)
+			if (pawn.equipment?.Primary is not ZeFlammenwerfer flamethrower)
 				return;
 
 			var orientation = facing;
-			var location = drawPos;
-			location.y += magicOffset + (orientation == Rot4.North ? 0.0014478763f : -0.0014478763f);
-			Graphics.DrawMesh(MeshPool.plane10, location + ZeFlameComp.tankOffset[orientation.AsInt], Quaternion.identity, Assets.tank, 0);
+			var location = ZeFlameComp.TankDrawPosition(drawPos, orientation);
+			Graphics.DrawMesh(MeshPool.plane10, location, Quaternion.identity, Assets.tank, 0);
 
-			var flameComp = pawn.equipment?.Primary?.TryGetComp<ZeFlameComp>();
+			var flameComp = flamethrower.flameComp ?? flamethrower.TryGetComp<ZeFlameComp>();
 			if (flameComp == null)
 				return;
-			flameComp.UpdateDrawPos(pawn);
+			flameComp.UpdateDrawPos(pawn, drawPos, orientation, flags);
 		}
 	}
 
@@ -197,53 +257,54 @@ namespace ZeFlammenwerfer
 
 	// stop flamethrower when removed
 	//
-		[HarmonyPatch(typeof(Pawn_EquipmentTracker), nameof(Pawn_EquipmentTracker.Notify_EquipmentRemoved))]
-		public static class Pawn_EquipmentTracker_Notify_EquipmentRemoved_Patch
+	[HarmonyPatch(typeof(Pawn_EquipmentTracker), nameof(Pawn_EquipmentTracker.Notify_EquipmentRemoved))]
+	public static class Pawn_EquipmentTracker_Notify_EquipmentRemoved_Patch
+	{
+		public static void Prefix(ThingWithComps eq)
 		{
-			public static void Prefix(ThingWithComps eq)
-		{
-			var flameComp = eq.TryGetComp<ZeFlameComp>();
-			flameComp?.SetActive(false);
-				flameComp?.SetPipeActive(false);
 			if (eq is ZeFlammenwerfer flamethrower)
 			{
-				flamethrower.ClearManualTarget();
-				FlameDangerTracker.Clear(flamethrower.pawn);
+				flamethrower.ClearManualTargetVisuals();
+				return;
 			}
-			}
-		}
 
-		[HarmonyPatch(typeof(Pawn_EquipmentTracker), nameof(Pawn_EquipmentTracker.TryDropEquipment))]
-		public static class Pawn_EquipmentTracker_TryDropEquipment_Patch
+			var flameComp = eq.TryGetComp<ZeFlameComp>();
+			flameComp?.SetActive(false);
+			flameComp?.SetPipeActive(false);
+		}
+	}
+
+	[HarmonyPatch(typeof(Pawn_EquipmentTracker), nameof(Pawn_EquipmentTracker.TryDropEquipment))]
+	public static class Pawn_EquipmentTracker_TryDropEquipment_Patch
+	{
+		public static void Prefix(ThingWithComps eq, ref bool forbid)
 		{
-			public static void Prefix(ThingWithComps eq, ref bool forbid)
-			{
-				if (eq is ZeFlammenwerfer)
-					forbid = false;
-			}
+			if (eq is ZeFlammenwerfer)
+				forbid = false;
 		}
+	}
 
-		[HarmonyPatch(typeof(FloatMenuMakerMap), nameof(FloatMenuMakerMap.GetOptions))]
-		public static class FloatMenuMakerMap_GetOptions_Patch
+	[HarmonyPatch(typeof(FloatMenuMakerMap), nameof(FloatMenuMakerMap.GetOptions))]
+	public static class FloatMenuMakerMap_GetOptions_Patch
+	{
+		public static void Postfix(FloatMenuContext context, ref List<FloatMenuOption> __result)
 		{
-			public static void Postfix(FloatMenuContext context, ref List<FloatMenuOption> __result)
-			{
-				if (context == null || context.IsMultiselect || context.FirstSelectedPawn == null || __result == null)
-					return;
-				var actor = context.FirstSelectedPawn;
-				var droppedFlamethrower = context.ClickedThings.OfType<ZeFlammenwerfer>().FirstOrDefault(thing => thing.pawn == null);
-				if (droppedFlamethrower != null)
-					__result.Add(FlamethrowerRefuelUtility.MakeGroundRefuelOption(actor, droppedFlamethrower));
-				var bearer = context.ClickedPawns.FirstOrDefault(pawn => pawn != actor && FlamethrowerRefuelUtility.EquippedFlamethrower(pawn) != null);
-				if (bearer == null)
-					return;
-				__result.Add(FlamethrowerRefuelUtility.MakeEquippedRefuelOption(actor, bearer));
-			}
+			if (context == null || context.IsMultiselect || context.FirstSelectedPawn == null || __result == null)
+				return;
+			var actor = context.FirstSelectedPawn;
+			var droppedFlamethrower = context.ClickedThings.OfType<ZeFlammenwerfer>().FirstOrDefault(thing => thing.pawn == null);
+			if (droppedFlamethrower != null)
+				__result.Add(FlamethrowerRefuelUtility.MakeGroundRefuelOption(actor, droppedFlamethrower));
+			var bearer = context.ClickedPawns.FirstOrDefault(pawn => pawn != actor && FlamethrowerRefuelUtility.EquippedFlamethrower(pawn) != null);
+			if (bearer == null)
+				return;
+			__result.Add(FlamethrowerRefuelUtility.MakeEquippedRefuelOption(actor, bearer));
 		}
+	}
 
-		// make fire below flame projectiles
-		//
-		[HarmonyPatch(typeof(Thing), nameof(Thing.Position), MethodType.Setter)]
+	// make fire below flame projectiles
+	//
+	[HarmonyPatch(typeof(Thing), nameof(Thing.Position), MethodType.Setter)]
 	public static class Thing_Position_Patch
 	{
 		public static void Postfix(Thing __instance, IntVec3 value)
@@ -344,7 +405,7 @@ namespace ZeFlammenwerfer
 					return true;
 				if (flamethrower.CanFireNow == false)
 				{
-					flamethrower.flameComp?.SetActive(false);
+					flamethrower.ClearManualTargetVisuals();
 					return false;
 				}
 				if (flamethrower.FuelPerShot > 0f)
