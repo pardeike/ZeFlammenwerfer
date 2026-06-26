@@ -13,16 +13,16 @@ Start here before making non-trivial changes:
 
 - Build from the repository root with `dotnet build Source/ZeFlammenwerfer.csproj -c Release` after C#, dependency, or project-file changes.
 - For quiet local validation, use `./scripts/build-quiet.sh -c Release /p:RIMWORLD_MOD_DIR=`.
-- The release build writes tracked assemblies under `1.6/Assemblies` and companion tools under `1.6/BridgeTools`, primarily `ZeFlammenwerfer.dll` and `ZeFlammenwerfer.BridgeTools.dll`.
-- If `RIMWORLD_MOD_DIR` is set, the build also copies the mod into that RimWorld Mods directory and creates a zip there.
-- Do not remove the `1.4` or `1.6` folders unless the packaging strategy changes deliberately. `LoadFolders.xml` still points RimWorld at the shared root plus per-version folders.
-- Root `Defs`, `Resources`, `Sounds`, and `Textures` are active shared runtime payload for both listed RimWorld versions. Do not move them under `1.6` unless `LoadFolders.xml` and release packaging are changed deliberately.
+- The release build writes the tracked runtime assembly under `1.6/Assemblies`, primarily `ZeFlammenwerfer.dll`.
+- If `RIMWORLD_MOD_DIR` is set, the build copies the 1.6 mod payload into that RimWorld Mods directory, creates a zip there, and deploys RimBridge companion tools to the global sibling `BridgeTools/ZeFlammenwerfer` folder.
+- This mod is RimWorld 1.6-only. `LoadFolders.xml` points RimWorld at the shared root plus `1.6`.
+- Root `Defs`, `Resources`, `Sounds`, and `Textures` are active shared runtime payload for RimWorld 1.6. Do not move them under `1.6` unless `LoadFolders.xml` and release packaging are changed deliberately.
 - Use `./scripts/build-assetbundles.sh` for Unity asset bundle rebuilds from `Originals/FlameThrowerUnity`; do not hand-copy Unity intermediates into `Resources`.
 - This mod has not been published to Steam Workshop yet. Do not add `About/PublishedFileId.txt` until the first SteamWorkshopAgent `new-mod` publish returns the real Workshop id.
 - For live RimWorld validation, prefer loading the save named `zeflammenwerfer walkthrough`; it has a prepared test setup. `Dev quicktest` is still acceptable for fresh-colony smoke checks.
 - Use existing RimBridge tools for broad orchestration: `rimworld/load_game_ready`, `rimbridge/wait_for_game_loaded`, `rimworld/list_colonists`, `rimworld/step_game_ticks`, `rimworld/screenshot_cell_rect`, and `rimbridge/list_logs`.
 - Use this mod's `zeflammenwerfer/*` RimBridge tools for mod-owned state that generic RimBridge cannot see: control state, render pose/state, fuel read/write and refuel checks, flame line/collider probes, damage state, and controlled flame-damage probes.
-- Prefer companion `[Tool]` harnesses for repeatable live validation sequences that need real game ticks or frames. The shell/Node wrappers are only launchers and artifact collectors; keep broad orchestration, tick stepping, and screenshots in C# companion tools such as `zeflammenwerfer/render_tank_pipe_pose_sweep`.
+- Prefer companion `[Tool]` harnesses for repeatable live validation sequences that need real game ticks or frames. The shell/Node wrappers are only launchers and artifact collectors; keep broad orchestration, tick stepping, and screenshots in C# companion tools such as `zeflammenwerfer/render_tank_pipe_pose_sweep`. Companion tools are local validation infrastructure and should deploy globally, not as part of the releasable mod payload.
 - For UI or visible in-game validation on macOS, prefer the local `regionshot` workflow when screenshots or app/window inspection are needed.
 
 ## Commit Policy

@@ -1,6 +1,5 @@
 ﻿using BansheeGz.BGSpline.Curve;
 using RimWorld;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -70,18 +69,7 @@ namespace ZeFlammenwerfer
 
 		public static void ApplyFlameDamage(ThingWithComps thing, float amount)
 		{
-			var fireDamageComp = thing.GetComp<FireDamage>();
-			if (fireDamageComp == null)
-			{
-				fireDamageComp = (FireDamage)Activator.CreateInstance(typeof(FireDamage));
-				fireDamageComp.parent = thing;
-				if (thing.comps == null)
-					thing.comps = new List<ThingComp>() { fireDamageComp };
-				else
-					thing.comps.Add(fireDamageComp);
-			}
-
-			fireDamageComp.Increase();
+			FlameDamageTracker.Increase(thing);
 
 			if (thing is Pawn)
 			{

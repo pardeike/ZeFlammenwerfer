@@ -23,16 +23,31 @@ namespace ZeFlammenwerfer
 
 		public override IEnumerable<Toil> MakeNewToils()
 		{
+			var initialFlamethrower = Flamethrower;
+
 			// The fuel target is carried after pickup, so despawning alone is not a failure.
 			this.FailOnDestroyedNullOrForbidden(FuelInd);
-			AddEndCondition(() => RefuelableComp == null ? JobCondition.Incompletable : (RefuelableComp.IsFull ? JobCondition.Succeeded : JobCondition.Ongoing));
+			AddEndCondition(() =>
+			{
+				var comp = RefuelableComp;
+				return comp == null ? JobCondition.Incompletable : (comp.IsFull ? JobCondition.Succeeded : JobCondition.Ongoing);
+			});
 			AddFailCondition(() => Bearer == null || !Bearer.Spawned || Bearer.Dead);
-			AddFailCondition(() => !job.playerForced && !RefuelableComp.ShouldAutoRefuelNowIgnoringFuelPct);
-			AddFailCondition(() => !RefuelableComp.allowAutoRefuel && !job.playerForced);
+			AddFailCondition(() => initialFlamethrower == null || Flamethrower != initialFlamethrower);
+			AddFailCondition(() =>
+			{
+				var comp = RefuelableComp;
+				return comp == null || (!job.playerForced && !comp.ShouldAutoRefuelNowIgnoringFuelPct);
+			});
+			AddFailCondition(() =>
+			{
+				var comp = RefuelableComp;
+				return comp == null || (!comp.allowAutoRefuel && !job.playerForced);
+			});
 
 			yield return Toils_General.DoAtomic(delegate
 			{
-				job.count = RefuelableComp.GetFuelCountToFullyRefuel();
+				job.count = RefuelableComp?.GetFuelCountToFullyRefuel() ?? 0;
 			});
 			Toil reserveFuel = Toils_Reserve.Reserve(FuelInd);
 			yield return reserveFuel;
@@ -43,7 +58,7 @@ namespace ZeFlammenwerfer
 				yield return Toils_Goto.GotoThing(BearerInd, PathEndMode.Touch);
 			yield return Toils_General.Wait(240).FailOnDestroyedNullOrForbidden(FuelInd)
 				.FailOnCannotTouch(BearerInd, PathEndMode.Touch)
-				.FailOn(() => Flamethrower == null)
+				.FailOn(() => Flamethrower == null || Flamethrower != initialFlamethrower || RefuelableComp == null)
 				.WithProgressBarToilDelay(BearerInd);
 			yield return Toils_General.Do(delegate
 			{

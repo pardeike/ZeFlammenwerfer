@@ -73,14 +73,21 @@ namespace ZeFlammenwerfer
 
 		public static bool InRange(Pawn pawn)
 		{
+			if (pawn?.Map == null || pawn.drawer?.tweener == null)
+				return false;
+
 			var map = pawn.Map;
 			var position = pawn.drawer.tweener.tweenedPos;
-			return trackers.Keys
-				.AsParallel()
-				.Any(
-					shooter => shooter.Map == map &&
-					(shooter.drawer.tweener.tweenedPos - position).MagnitudeHorizontalSquared() <= FlameRadiusDetector.maxRadiusSquared
-				);
+			var shooters = trackers.Keys.ToArray();
+			for (var i = 0; i < shooters.Length; i++)
+			{
+				var shooter = shooters[i];
+				if (shooter?.Spawned != true || shooter.Map != map || shooter.drawer?.tweener == null)
+					continue;
+				if ((shooter.drawer.tweener.tweenedPos - position).MagnitudeHorizontalSquared() <= FlameRadiusDetector.maxRadiusSquared)
+					return true;
+			}
+			return false;
 		}
 	}
 }

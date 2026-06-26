@@ -108,6 +108,21 @@ namespace ZeFlammenwerfer
 			mapStates.Clear();
 		}
 
+		public static void ClearMap(Map map)
+		{
+			if (map == null)
+				return;
+
+			foreach (var pair in shooterStates.Where(pair => pair.Value.map == map).ToArray())
+				shooterStates.Remove(pair.Key);
+
+			if (mapStates.TryGetValue(map, out var state))
+			{
+				state.Dispose();
+				mapStates.Remove(map);
+			}
+		}
+
 		public static void Clear(Pawn shooter)
 		{
 			if (shooter == null)
@@ -211,8 +226,8 @@ namespace ZeFlammenwerfer
 			{
 				if (remove)
 					return;
-					state = new MapState(map);
-					mapStates[map] = state;
+				state = new MapState(map);
+				mapStates[map] = state;
 			}
 			var softRefCounts = state.softRefCounts;
 			var hardRefCounts = state.hardRefCounts;
@@ -264,11 +279,6 @@ namespace ZeFlammenwerfer
 				map.pathing?.RecalculatePerceivedPathCostAt(cellIndices.IndexToCell(cellIndex));
 			}
 
-			if (state.activeCellCount == 0)
-			{
-				state.Dispose();
-				mapStates.Remove(map);
-			}
 		}
 
 		static bool UpcomingPathContainsDanger(Pawn_PathFollower pather)
@@ -305,6 +315,17 @@ namespace ZeFlammenwerfer
 			if (cell.IsValid == false || cell.InBounds(state.map) == false)
 				return false;
 			return state.routeCosts[cellIndices.CellToIndex(cell)] > 0;
+		}
+	}
+
+	public sealed class FlameDangerMapComponent : MapComponent
+	{
+		public FlameDangerMapComponent(Map map) : base(map) { }
+
+		public override void MapRemoved()
+		{
+			base.MapRemoved();
+			FlameDangerTracker.ClearMap(map);
 		}
 	}
 }

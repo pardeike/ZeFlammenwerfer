@@ -27,9 +27,6 @@ namespace ZeFlammenwerfer
 
 		public override void Impact(Thing hitThing, bool blockedByShield = false)
 		{
-			if (blockedByShield) // shield does not block
-				return;
-
 			// do not call base
 			if (flameComp == null)
 				return;

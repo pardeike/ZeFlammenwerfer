@@ -62,12 +62,12 @@ namespace ZeFlammenwerfer
 				subscribers[i].Equipped(pawn);
 		}
 
-		[HarmonyPostfix]
-		[HarmonyPatch(typeof(ThingWithComps), nameof(ThingWithComps.Notify_Unequipped))]
-		public static void Notify_Unequipped(Pawn __instance, Pawn pawn)
-		{
-			if (pawn == null || __instance.def != Defs.ZeFlammenwerfer)
-				return;
+	[HarmonyPostfix]
+	[HarmonyPatch(typeof(ThingWithComps), nameof(ThingWithComps.Notify_Unequipped))]
+	public static void Notify_Unequipped(ThingWithComps __instance, Pawn pawn)
+	{
+		if (pawn == null || __instance.def != Defs.ZeFlammenwerfer)
+			return;
 			var n = subscribers.Count;
 			for (var i = 0; i < n; i++)
 				subscribers[i].Unequipped(pawn);

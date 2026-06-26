@@ -21,12 +21,13 @@ For quieter local builds:
 Release builds write:
 
 - `1.6/Assemblies/ZeFlammenwerfer.dll`
-- `1.6/BridgeTools/ZeFlammenwerfer.BridgeTools.dll`
+- `artifacts/BridgeTools/ZeFlammenwerfer/ZeFlammenwerfer.BridgeTools.dll`
 
 The project has a `CopyToRimworld` MSBuild target that runs when `RIMWORLD_MOD_DIR` is set. That target:
 
 - deletes `1.6/Assemblies/0Harmony.dll` if a package accidentally places it there.
-- copies the `1.4` and `1.6` folders plus root metadata/assets into `$(RIMWORLD_MOD_DIR)\ZeFlammenwerfer`.
+- copies the `1.6` folder plus root metadata/assets into `$(RIMWORLD_MOD_DIR)\ZeFlammenwerfer`.
+- deploys the RimBridge companion DLL to the global sibling folder `$(RIMWORLD_MOD_DIR)\..\BridgeTools\ZeFlammenwerfer` unless `RIMWORLD_BRIDGETOOLS_DIR` is set explicitly.
 - zips that copied mod folder as `$(RIMWORLD_MOD_DIR)\ZeFlammenwerfer.zip`.
 
 On macOS with a Unix shell, MSBuild still prints Windows-style path separators in the target body because the project file uses backslashes.
@@ -42,7 +43,9 @@ Current top-level package references in `Source/ZeFlammenwerfer.csproj`:
 - `Microsoft.NETFramework.ReferenceAssemblies.net472`
 - `TaskPubliciser`
 
-`Source/BridgeTools/ZeFlammenwerfer.BridgeTools.csproj` builds the RimBridge companion tool assembly against the official `RimBridgeServer.Sdk` NuGet package and writes it to `1.6/BridgeTools`. `NuGet.config` clears inherited package sources and enables only `nuget.org`, so restores do not accidentally consume a sibling local SDK feed. The companion reference uses `PrivateAssets="all"` and `ExcludeAssets="runtime"` so `RimBridgeServer.Sdk.dll` is not deployed beside the companion DLL.
+`Source/BridgeTools/ZeFlammenwerfer.BridgeTools.csproj` builds the RimBridge companion tool assembly against the official `RimBridgeServer.Sdk` NuGet package and writes it under ignored `artifacts/BridgeTools/ZeFlammenwerfer`. `NuGet.config` clears inherited package sources and enables only `nuget.org`, so restores do not accidentally consume a sibling local SDK feed. The companion reference uses `PrivateAssets="all"` and `ExcludeAssets="runtime"` so `RimBridgeServer.Sdk.dll` is not deployed beside the companion DLL.
+
+Companion tools are local validation infrastructure. Local deploy copies them to RimBridgeServer's global `BridgeTools` discovery folder; release zips do not include them.
 
 `Lib.Harmony` is a compile-time package here. The runtime Harmony dependency is provided by the RimWorld Harmony mod declared in `About/About.xml`.
 
@@ -72,9 +75,8 @@ The `PostBuildAction` target writes `ModVersion` into:
 
 ## RimWorld Payload Files
 
-`LoadFolders.xml` intentionally loads shared root content plus per-version folders:
+`LoadFolders.xml` intentionally loads shared root content plus the 1.6 folder:
 
-- RimWorld `1.4`: `/`, then `1.4`
 - RimWorld `1.6`: `/`, then `1.6`
 
 Root payload directories are therefore still active:
@@ -85,7 +87,7 @@ Root payload directories are therefore still active:
 - `Sounds`: flamethrower audio clips.
 - `Textures`: item/debug/tank textures.
 
-RimWorld 1.6-only job and workgiver defs live under `1.6/Defs`.
+RimWorld job and workgiver defs live under `1.6/Defs`.
 
 ## Asset Bundles
 

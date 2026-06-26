@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using RimWorld;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -162,14 +163,24 @@ namespace ZeFlammenwerfer
 	{
 		public static MethodBase TargetMethod()
 		{
-			return AccessTools.FirstMethod(typeof(Pawn_EquipmentTracker), mi =>
+			var candidates = AccessTools.GetDeclaredMethods(typeof(Pawn_EquipmentTracker))
+				.Where(mi =>
+				{
+					if (mi.GetParameters().Length < 1)
+						return false;
+					if (mi.GetParameters()[0].ParameterType != typeof(ThingWithComps))
+						return false;
+					return mi.Name.Contains("__YieldGizmos");
+				})
+				.ToArray();
+
+			if (candidates.Length != 1)
 			{
-				if (mi.GetParameters().Length < 1)
-					return false;
-				if (mi.GetParameters()[0].ParameterType != typeof(ThingWithComps))
-					return false;
-				return mi.Name.Contains("__YieldGizmos");
-			});
+				var names = string.Join(", ", candidates.Select(method => method.Name));
+				throw new InvalidOperationException($"[ZeFlammenwerfer] Expected exactly one Pawn_EquipmentTracker YieldGizmos helper with a ThingWithComps first parameter, found {candidates.Length}: {names}");
+			}
+
+			return candidates[0];
 		}
 
 		public static IEnumerable<Gizmo> Postfix(IEnumerable<Gizmo> gizmos, ThingWithComps eq)
@@ -295,9 +306,14 @@ namespace ZeFlammenwerfer
 			var droppedFlamethrower = context.ClickedThings.OfType<ZeFlammenwerfer>().FirstOrDefault(thing => thing.pawn == null);
 			if (droppedFlamethrower != null)
 				__result.Add(FlamethrowerRefuelUtility.MakeGroundRefuelOption(actor, droppedFlamethrower));
-			var clickedFuel = context.ClickedThings.FirstOrDefault(thing => FlamethrowerRefuelUtility.EquippedFlamethrower(actor)?.refuelable?.Props?.fuelFilter.Allows(thing) == true);
-			if (clickedFuel != null)
-				__result.Add(FlamethrowerRefuelUtility.MakeSelfRefuelFromFuelOption(actor, clickedFuel));
+			var actorFlamethrower = FlamethrowerRefuelUtility.EquippedFlamethrower(actor);
+			var actorRefuelable = actorFlamethrower?.refuelable ?? actorFlamethrower?.TryGetComp<CompRefuelable>();
+			if (actorRefuelable?.IsFull == false)
+			{
+				var clickedFuel = context.ClickedThings.FirstOrDefault(thing => actorRefuelable.Props?.fuelFilter.Allows(thing) == true);
+				if (clickedFuel != null)
+					__result.Add(FlamethrowerRefuelUtility.MakeSelfRefuelFromFuelOption(actor, clickedFuel));
+			}
 			var bearer = context.ClickedPawns.FirstOrDefault(pawn => pawn != actor && FlamethrowerRefuelUtility.EquippedFlamethrower(pawn) != null);
 			if (bearer == null)
 				return;
@@ -312,18 +328,17 @@ namespace ZeFlammenwerfer
 	{
 		public static void Postfix(Thing __instance, IntVec3 value)
 		{
-			if (__instance is ZeFlame flame)
+			if (__instance is not ZeFlame flame)
+				return;
+			var launcher = flame.Launcher;
+			var map = flame.Map;
+			if (map == null || launcher?.Spawned != true || value.DistanceToSquared(launcher.Position) <= 4)
+				return;
+			if (map.thingGrid.ThingAt<Fire>(value) == null)
 			{
-				var map = flame.Map;
-				if (map != null && value.DistanceToSquared(flame.Launcher.Position) > 4)
-				{
-					if (map.thingGrid.ThingAt<Fire>(value) == null)
-					{
-						var fire = (Fire)ThingMaker.MakeThing(ThingDefOf.Fire, null);
-						fire.fireSize = 0.5f;
-						_ = GenSpawn.Spawn(fire, flame.Position, map, Rot4.North, WipeMode.Vanish, false);
-					}
-				}
+				var fire = (Fire)ThingMaker.MakeThing(ThingDefOf.Fire, null);
+				fire.fireSize = 0.5f;
+				_ = GenSpawn.Spawn(fire, flame.Position, map, Rot4.North, WipeMode.Vanish, false);
 			}
 		}
 	}
@@ -345,19 +360,27 @@ namespace ZeFlammenwerfer
 
 		public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
+			var result = new List<CodeInstruction>();
+			var injectionCount = 0;
 			foreach (var instruction in instructions)
 			{
 				if (instruction.Branches(out var _))
 				{
-					yield return new CodeInstruction(OpCodes.Ldarg_0);
-					yield return CodeInstruction.Call(() => SkipStanceTickIfNecessary(default, default));
+					result.Add(new CodeInstruction(OpCodes.Ldarg_0));
+					result.Add(CodeInstruction.Call(() => SkipStanceTickIfNecessary(default, default)));
+					injectionCount++;
 				}
-				yield return instruction;
+				result.Add(instruction);
 			}
+			if (injectionCount == 0)
+				throw new InvalidOperationException("[ZeFlammenwerfer] Could not patch Pawn_StanceTracker.StanceTrackerTick: no branch anchor was found.");
+			if (injectionCount != 1)
+				Log.Warning($"[ZeFlammenwerfer] Patched Pawn_StanceTracker.StanceTrackerTick at {injectionCount} branch anchors; expected 1 for RimWorld 1.6.4850.");
+			return result;
 		}
 	}
 
-	// increase fire damage when a thing has a FireDamage comp
+	// increase fire damage when a thing is being hit by sustained flames
 	//
 	[HarmonyPatch(typeof(Fire), nameof(Fire.DoFireDamage))]
 	public static class Fire_DoFireDamage_Patch
@@ -367,14 +390,11 @@ namespace ZeFlammenwerfer
 
 		public static float Multiply(float damage, Thing thing)
 		{
-			if (thing is ThingWithComps thingWithComps)
+			var multiplier = FlameDamageTracker.GetMultiplier(thing);
+			if (multiplier > 1f)
 			{
-				var fireDamageComp = thingWithComps.GetComp<FireDamage>();
-				if (fireDamageComp != null)
-				{
-					var factor = (thing as Pawn) != null ? factorPawn : factorThing;
-					return damage * factor * fireDamageComp.multiplier;
-				}
+				var factor = thing is Pawn ? factorPawn : factorThing;
+				return damage * factor * multiplier;
 			}
 			return damage;
 		}
@@ -382,18 +402,26 @@ namespace ZeFlammenwerfer
 		public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
 			var previousWasDamageLoad = false;
+			var result = new List<CodeInstruction>();
+			var injectionCount = 0;
 			foreach (var instruction in instructions)
 			{
-				yield return instruction;
+				result.Add(instruction);
 
 				if (previousWasDamageLoad && instruction.opcode == OpCodes.Conv_R4)
 				{
-					yield return new CodeInstruction(OpCodes.Ldarg_1);
-					yield return CodeInstruction.Call(() => Multiply(default, default));
+					result.Add(new CodeInstruction(OpCodes.Ldarg_1));
+					result.Add(CodeInstruction.Call(() => Multiply(default, default)));
+					injectionCount++;
 				}
 
 				previousWasDamageLoad = LoadsDamageLocal(instruction);
 			}
+			if (injectionCount == 0)
+				throw new InvalidOperationException("[ZeFlammenwerfer] Could not patch Fire.DoFireDamage: no damage-local conversion anchor was found.");
+			if (injectionCount != 3)
+				Log.Warning($"[ZeFlammenwerfer] Patched Fire.DoFireDamage at {injectionCount} damage anchors; expected 3 for RimWorld 1.6.4850.");
+			return result;
 		}
 
 		static bool LoadsDamageLocal(CodeInstruction instruction)
@@ -822,7 +850,7 @@ namespace ZeFlammenwerfer
 				return true;
 			if (thing is not Pawn pawn || pawn.RaceProps.IsMechanoid == false)
 				return true;
-			if (pawn.TryGetComp<FireDamage>() == null)
+			if (FlameDamageTracker.IsTracked(pawn) == false)
 				return true;
 			__result = flammableValue;
 			return false;
@@ -840,7 +868,7 @@ namespace ZeFlammenwerfer
 				return;
 			if (dinfo.ignoreInstantKillProtectionInt)
 				return;
-			if (pawn.TryGetComp<FireDamage>() == null)
+			if (FlameDamageTracker.IsTracked(pawn) == false)
 				return;
 			var newDinfo = new DamageInfo(dinfo);
 			newDinfo.SetAllowDamagePropagation(false);

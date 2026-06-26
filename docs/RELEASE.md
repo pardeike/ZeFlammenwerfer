@@ -36,8 +36,9 @@ When publishing a new version, update `ModVersion` in `Directory.Build.props`, r
 - `About/About.xml`
 - `About/Manifest.xml`
 - `1.6/Assemblies/ZeFlammenwerfer.dll`
-- `1.6/BridgeTools/ZeFlammenwerfer.BridgeTools.dll`
 - `Resources/flamethrower-*`, if asset bundles changed
+
+RimBridge companion tools are deployed locally to the global `BridgeTools` folder for validation. They are not part of the GitHub or Steam release zip.
 
 For ordinary source-only development commits, restore generated assemblies before committing unless the commit is intentionally release-related.
 

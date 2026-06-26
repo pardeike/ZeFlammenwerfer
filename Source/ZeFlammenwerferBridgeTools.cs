@@ -200,15 +200,14 @@ namespace ZeFlammenwerfer
 				.ToArray() ?? Array.Empty<object>();
 		}
 
-		static object DescribeFireDamage(ThingWithComps thing)
+		static object DescribeFireDamage(Thing thing)
 		{
-			var comp = thing?.GetComp<FireDamage>();
-			if (comp == null)
+			if (FlameDamageTracker.TryGetMultiplier(thing, out var multiplier) == false)
 				return null;
 
 			return new
 			{
-				multiplier = comp.multiplier
+				multiplier
 			};
 		}
 
@@ -228,7 +227,7 @@ namespace ZeFlammenwerfer
 					downed = pawn.Downed,
 					healthSummary = pawn.health?.summaryHealth?.SummaryHealthPercent ?? 0f
 				},
-				fireDamage = DescribeFireDamage(thingWithComps),
+				fireDamage = DescribeFireDamage(thing),
 				attachedFires = DescribeAttachedFires(thingWithComps)
 			};
 		}
@@ -664,9 +663,41 @@ namespace ZeFlammenwerfer
 			};
 		}
 
-		static RimBridgeToolCallResult<object> LocalResult(object result)
+		static bool PayloadSucceeded(object result)
 		{
-			return new RimBridgeToolCallResult<object> { Success = true, Result = result };
+			return TryReadPayload(result, "success", out bool success) && success;
+		}
+
+		static bool TryReadPayload<T>(object result, string propertyName, out T value)
+		{
+			value = default;
+			if (result == null || string.IsNullOrEmpty(propertyName))
+				return false;
+
+			if (result is IReadOnlyDictionary<string, object> readOnlyDictionary
+				&& readOnlyDictionary.TryGetValue(propertyName, out var readOnlyValue)
+				&& readOnlyValue is T typedReadOnlyValue)
+			{
+				value = typedReadOnlyValue;
+				return true;
+			}
+
+			if (result is IDictionary<string, object> dictionary
+				&& dictionary.TryGetValue(propertyName, out var dictionaryValue)
+				&& dictionaryValue is T typedDictionaryValue)
+			{
+				value = typedDictionaryValue;
+				return true;
+			}
+
+			var property = result.GetType().GetProperty(propertyName);
+			if (property?.GetValue(result) is T typedValue)
+			{
+				value = typedValue;
+				return true;
+			}
+
+			return false;
 		}
 
 		static LocalTargetInfo ApplyRenderPose(Pawn pawn, ZeFlammenwerfer flamethrower, Rot4 rotation, IntVec3 targetCell, bool draft, bool setManualTarget, bool activateVisual, bool stopMovement, bool clearUiState)
@@ -995,8 +1026,7 @@ namespace ZeFlammenwerfer
 			}
 
 			var sweep = ListTankPipePoseSweep(cellX, cellZ, radius, halfRadius);
-			var sweepResult = LocalResult(sweep);
-			if (sweepResult.Succeeded() == false)
+			if (PayloadSucceeded(sweep) == false)
 			{
 				return new
 				{
@@ -1021,8 +1051,7 @@ namespace ZeFlammenwerfer
 					activateVisual: false,
 					stopMovement: true,
 					clearUiState: true);
-				var poseResult = LocalResult(pose);
-				if (poseResult.Succeeded() == false)
+				if (PayloadSucceeded(pose) == false)
 				{
 					return new
 					{
@@ -1050,7 +1079,7 @@ namespace ZeFlammenwerfer
 					};
 				}
 
-				var label = poseResult.TryReadResult<string>(out var poseLabel, "label") ? poseLabel : TankPipeAimSweep[poseIndex - 1].Label;
+				var label = TryReadPayload(pose, "label", out string poseLabel) ? poseLabel : TankPipeAimSweep[poseIndex - 1].Label;
 				var shot = await ctx.Tools.CallAsync("rimworld/screenshot_cell_rect", new
 				{
 					x = cellX,
@@ -1296,7 +1325,7 @@ namespace ZeFlammenwerfer
 			};
 		}
 
-		[Tool("zeflammenwerfer/get_damage_state", Description = "Read fire, FireDamage, health, and hitpoint state for a pawn, thing, selected thing, or bounded cell area.")]
+		[Tool("zeflammenwerfer/get_damage_state", Description = "Read fire, sustained flame-damage, health, and hitpoint state for a pawn, thing, selected thing, or bounded cell area.")]
 		public static object GetDamageState(
 			[ToolParameter(Description = "Optional stable thing id such as Thing_Wall47012.", Required = false, DefaultValue = null)] string thingId = null,
 			[ToolParameter(Description = "Optional stable pawn id such as Thing_Human776. Used when thingId is empty.", Required = false, DefaultValue = null)] string pawnId = null,

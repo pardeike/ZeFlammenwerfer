@@ -6,7 +6,7 @@
 		<TargetFramework>net472</TargetFramework>
 		<LangVersion>latest</LangVersion>
 		<PlatformTarget>x64</PlatformTarget>
-		<OutputPath>..\..\1.6\BridgeTools\</OutputPath>
+		<OutputPath>..\..\artifacts\BridgeTools\ZeFlammenwerfer\</OutputPath>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 		<Version>$(ModVersion)</Version>

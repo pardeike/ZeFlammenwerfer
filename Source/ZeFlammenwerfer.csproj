@@ -117,19 +117,21 @@
 	<Target Name="CopyToRimworld" AfterTargets="PostBuildAction" Condition="'$(RIMWORLD_MOD_DIR)' != ''">
 		<Delete Files="..\1.6\Assemblies\0Harmony.dll" />
 		<RemoveDir Directories="$(RIMWORLD_MOD_DIR)\$(ModFileName)" />
+		<PropertyGroup>
+			<RIMWORLD_BRIDGETOOLS_DIR Condition="'$(RIMWORLD_BRIDGETOOLS_DIR)' == ''">$(RIMWORLD_MOD_DIR)\..\BridgeTools</RIMWORLD_BRIDGETOOLS_DIR>
+		</PropertyGroup>
 		<ItemGroup>
-			<Copy_14 Include="..\1.4\**" />
-			<Copy_16 Include="..\1.6\**" />
-			<CopyAbout Include="..\About\**" />
-			<CopyDefs Include="..\Defs\**" />
-			<CopyResources Include="..\Resources\**" />
-			<CopySounds Include="..\Sounds\**" />
-			<CopyTextures Include="..\Textures\**" />
+			<Copy_16 Include="..\1.6\**" Exclude="..\1.6\BridgeTools\**;..\1.6\**\.DS_Store;..\1.6\**\._*" />
+			<CopyAbout Include="..\About\**" Exclude="..\About\**\.DS_Store;..\About\**\._*" />
+			<CopyDefs Include="..\Defs\**" Exclude="..\Defs\**\.DS_Store;..\Defs\**\._*" />
+			<CopyResources Include="..\Resources\**" Exclude="..\Resources\**\.DS_Store;..\Resources\**\._*" />
+			<CopySounds Include="..\Sounds\**" Exclude="..\Sounds\**\.DS_Store;..\Sounds\**\._*" />
+			<CopyTextures Include="..\Textures\**" Exclude="..\Textures\**\.DS_Store;..\Textures\**\._*" />
 			<CopyLicense Include="..\LICENSE" />
 			<CopyLoadFolders Include="..\LoadFolders.xml" />
 			<CopyReadme Include="..\README.md" />
+			<CopyBridgeTools Include="..\artifacts\BridgeTools\ZeFlammenwerfer\ZeFlammenwerfer.BridgeTools.dll" />
 		</ItemGroup>
-		<Copy SourceFiles="@(Copy_14)" DestinationFolder="$(RIMWORLD_MOD_DIR)\$(ModFileName)\1.4\%(RecursiveDir)" />
 		<Copy SourceFiles="@(Copy_16)" DestinationFolder="$(RIMWORLD_MOD_DIR)\$(ModFileName)\1.6\%(RecursiveDir)" />
 		<Copy SourceFiles="@(CopyAbout)" DestinationFolder="$(RIMWORLD_MOD_DIR)\$(ModFileName)\About\%(RecursiveDir)" />
 		<Copy SourceFiles="@(CopyDefs)" DestinationFolder="$(RIMWORLD_MOD_DIR)\$(ModFileName)\Defs\%(RecursiveDir)" />
@@ -139,6 +141,7 @@
 		<Copy SourceFiles="@(CopyLicense)" DestinationFolder="$(RIMWORLD_MOD_DIR)\$(ModFileName)" />
 		<Copy SourceFiles="@(CopyLoadFolders)" DestinationFolder="$(RIMWORLD_MOD_DIR)\$(ModFileName)" />
 		<Copy SourceFiles="@(CopyReadme)" DestinationFolder="$(RIMWORLD_MOD_DIR)\$(ModFileName)" />
+		<Copy SourceFiles="@(CopyBridgeTools)" DestinationFolder="$(RIMWORLD_BRIDGETOOLS_DIR)\ZeFlammenwerfer" SkipUnchangedFiles="true" />
 	</Target>
 
 	<Target Name="ZipMod" AfterTargets="CopyToRimworld" Condition="'$(RIMWORLD_MOD_DIR)' != ''">
