@@ -295,6 +295,9 @@ namespace ZeFlammenwerfer
 			var droppedFlamethrower = context.ClickedThings.OfType<ZeFlammenwerfer>().FirstOrDefault(thing => thing.pawn == null);
 			if (droppedFlamethrower != null)
 				__result.Add(FlamethrowerRefuelUtility.MakeGroundRefuelOption(actor, droppedFlamethrower));
+			var clickedFuel = context.ClickedThings.FirstOrDefault(thing => FlamethrowerRefuelUtility.EquippedFlamethrower(actor)?.refuelable?.Props?.fuelFilter.Allows(thing) == true);
+			if (clickedFuel != null)
+				__result.Add(FlamethrowerRefuelUtility.MakeSelfRefuelFromFuelOption(actor, clickedFuel));
 			var bearer = context.ClickedPawns.FirstOrDefault(pawn => pawn != actor && FlamethrowerRefuelUtility.EquippedFlamethrower(pawn) != null);
 			if (bearer == null)
 				return;
@@ -443,6 +446,225 @@ namespace ZeFlammenwerfer
 					return;
 				flame.Configure(pawn, flameComp);
 			}
+		}
+	}
+
+	[HarmonyPatch(typeof(CompRefuelable), nameof(CompRefuelable.FuelPercentOfMax), MethodType.Getter)]
+	public static class CompRefuelable_FuelPercentOfMax_Patch
+	{
+		static void Postfix(CompRefuelable __instance, ref float __result)
+		{
+			if (FuelScaling.TryGetFlamethrower(__instance, out var flamethrower))
+			{
+				var capacity = flamethrower.FuelCapacity;
+				__result = capacity <= 0f ? 0f : __instance.Fuel / capacity;
+			}
+		}
+	}
+
+	[HarmonyPatch(typeof(CompRefuelable), nameof(CompRefuelable.Initialize))]
+	public static class CompRefuelable_Initialize_Patch
+	{
+		static void Postfix(CompRefuelable __instance)
+		{
+			if (FuelScaling.TryGetFlamethrower(__instance, out var flamethrower))
+				FuelScaling.InitializeFuel(__instance, flamethrower);
+		}
+	}
+
+	[HarmonyPatch(typeof(CompRefuelable), nameof(CompRefuelable.FuelPercentOfTarget), MethodType.Getter)]
+	public static class CompRefuelable_FuelPercentOfTarget_Patch
+	{
+		static void Postfix(CompRefuelable __instance, ref float __result)
+		{
+			if (FuelScaling.TryGetFlamethrower(__instance, out var flamethrower))
+			{
+				var targetFuelLevel = FuelScaling.TargetFuelLevelFor(__instance, flamethrower);
+				__result = targetFuelLevel <= 0f ? 0f : __instance.Fuel / targetFuelLevel;
+			}
+		}
+	}
+
+	[HarmonyPatch(typeof(CompRefuelable), nameof(CompRefuelable.TargetFuelLevel), MethodType.Getter)]
+	public static class CompRefuelable_TargetFuelLevel_Getter_Patch
+	{
+		static void Postfix(CompRefuelable __instance, ref float __result)
+		{
+			if (FuelScaling.TryGetFlamethrower(__instance, out var flamethrower))
+				__result = FuelScaling.TargetFuelLevelFor(__instance, flamethrower);
+		}
+	}
+
+	[HarmonyPatch(typeof(CompRefuelable), nameof(CompRefuelable.TargetFuelLevel), MethodType.Setter)]
+	public static class CompRefuelable_TargetFuelLevel_Setter_Patch
+	{
+		static bool Prefix(CompRefuelable __instance, float value)
+		{
+			if (FuelScaling.TryGetFlamethrower(__instance, out var flamethrower) == false)
+				return true;
+
+			FuelScaling.SetTargetFuelLevel(__instance, flamethrower, value);
+			return false;
+		}
+	}
+
+	[HarmonyPatch(typeof(CompRefuelable), nameof(CompRefuelable.IsFull), MethodType.Getter)]
+	public static class CompRefuelable_IsFull_Patch
+	{
+		static void Postfix(CompRefuelable __instance, ref bool __result)
+		{
+			if (FuelScaling.TryGetFlamethrower(__instance, out var flamethrower))
+				__result = FuelScaling.TargetFuelLevelFor(__instance, flamethrower) - __instance.Fuel < (__instance.Props?.FuelMultiplierCurrentDifficulty ?? 1f);
+		}
+	}
+
+	[HarmonyPatch(typeof(CompRefuelable), nameof(CompRefuelable.Refuel), new[] { typeof(float) })]
+	public static class CompRefuelable_Refuel_Float_Patch
+	{
+		static bool Prefix(CompRefuelable __instance, float amount)
+		{
+			if (FuelScaling.TryGetFlamethrower(__instance, out var flamethrower) == false)
+				return true;
+
+			FuelScaling.Refuel(__instance, flamethrower, amount);
+			return false;
+		}
+	}
+
+	[HarmonyPatch(typeof(CompRefuelable), nameof(CompRefuelable.GetFuelCountToFullyRefuel))]
+	public static class CompRefuelable_GetFuelCountToFullyRefuel_Patch
+	{
+		static void Postfix(CompRefuelable __instance, ref int __result)
+		{
+			if (FuelScaling.TryGetFlamethrower(__instance, out var flamethrower))
+				__result = FuelScaling.FuelCountToFullyRefuel(__instance, flamethrower);
+		}
+	}
+
+	[HarmonyPatch(typeof(CompRefuelable), nameof(CompRefuelable.CompInspectStringExtra))]
+	public static class CompRefuelable_CompInspectStringExtra_Patch
+	{
+		static bool Prefix(CompRefuelable __instance, ref string __result)
+		{
+			if (FuelScaling.TryGetFlamethrower(__instance, out var flamethrower) == false)
+				return true;
+
+			var text = $"{__instance.Props.FuelLabel}: {__instance.Fuel.ToStringDecimalIfSmall()} / {flamethrower.FuelCapacity.ToStringDecimalIfSmall()}";
+			if (__instance.HasFuel == false && __instance.Props.outOfFuelMessage.NullOrEmpty() == false)
+				text += $"\n{__instance.Props.outOfFuelMessage} ({__instance.GetFuelCountToFullyRefuel()}x {__instance.Props.fuelFilter.AnyAllowedDef.label})";
+			if (__instance.Props.targetFuelLevelConfigurable)
+				text += "\n" + "ConfiguredTargetFuelLevel".Translate(__instance.TargetFuelLevel.ToStringDecimalIfSmall());
+
+			__result = text;
+			return false;
+		}
+	}
+
+	[HarmonyPatch(typeof(CompRefuelable), nameof(CompRefuelable.CompGetGizmosExtra))]
+	public static class CompRefuelable_CompGetGizmosExtra_Patch
+	{
+		static void Postfix(CompRefuelable __instance, ref IEnumerable<Gizmo> __result)
+		{
+			if (!FuelScaling.TryGetFlamethrower(__instance, out _))
+				return;
+
+			__result = ReplaceDynamicFuelDevGizmos(__instance, __result);
+		}
+
+		static IEnumerable<Gizmo> ReplaceDynamicFuelDevGizmos(CompRefuelable refuelable, IEnumerable<Gizmo> gizmos)
+		{
+			foreach (var gizmo in gizmos)
+			{
+				if (gizmo is Command_Action command && command.defaultLabel == "DEV: Fuel -20%")
+				{
+					yield return MakeFuelMinusTwentyPercentAction(refuelable);
+					continue;
+				}
+
+				if (gizmo is Command_Action command2 && command2.defaultLabel == "DEV: Set fuel to max")
+				{
+					yield return MakeSetFuelToMaxAction(refuelable);
+					continue;
+				}
+
+				yield return gizmo;
+			}
+		}
+
+		static Command_Action MakeFuelMinusTwentyPercentAction(CompRefuelable refuelable)
+		{
+			return new Command_Action
+			{
+				defaultLabel = "DEV: Fuel -20%",
+				action = delegate
+				{
+					if (FuelScaling.TryGetFlamethrower(refuelable, out var flamethrower))
+						refuelable.ConsumeFuel(flamethrower.FuelCapacity * 0.2f);
+				}
+			};
+		}
+
+		static Command_Action MakeSetFuelToMaxAction(CompRefuelable refuelable)
+		{
+			return new Command_Action
+			{
+				defaultLabel = "DEV: Set fuel to max",
+				action = delegate
+				{
+					if (FuelScaling.TryGetFlamethrower(refuelable, out var flamethrower))
+					{
+						FuelScaling.SetFuelLevel(refuelable, flamethrower, flamethrower.FuelCapacity);
+						refuelable.parent.BroadcastCompSignal(CompRefuelable.RefueledSignal);
+					}
+				}
+			};
+		}
+	}
+
+	[HarmonyPatch(typeof(Gizmo_SetFuelLevel), "get_Target")]
+	public static class Gizmo_SetFuelLevel_Target_Getter_Patch
+	{
+		static readonly FieldInfo refuelableField = AccessTools.Field(typeof(Gizmo_SetFuelLevel), "refuelable");
+
+		static bool Prefix(Gizmo_SetFuelLevel __instance, ref float __result)
+		{
+			if (!FuelScaling.TryGetFlamethrower(RefuelableFor(__instance), out var flamethrower))
+				return true;
+
+			var capacity = flamethrower.FuelCapacity;
+			__result = capacity <= 0f ? 0f : Mathf.Clamp01(flamethrower.refuelable.TargetFuelLevel / capacity);
+			return false;
+		}
+
+		internal static CompRefuelable RefuelableFor(Gizmo_SetFuelLevel gizmo)
+		{
+			return (CompRefuelable)refuelableField.GetValue(gizmo);
+		}
+	}
+
+	[HarmonyPatch(typeof(Gizmo_SetFuelLevel), "set_Target")]
+	public static class Gizmo_SetFuelLevel_Target_Setter_Patch
+	{
+		static bool Prefix(Gizmo_SetFuelLevel __instance, float value)
+		{
+			if (!FuelScaling.TryGetFlamethrower(Gizmo_SetFuelLevel_Target_Getter_Patch.RefuelableFor(__instance), out var flamethrower))
+				return true;
+
+			flamethrower.refuelable.TargetFuelLevel = Mathf.Clamp01(value) * flamethrower.FuelCapacity;
+			return false;
+		}
+	}
+
+	[HarmonyPatch(typeof(Gizmo_SetFuelLevel), "get_BarLabel")]
+	public static class Gizmo_SetFuelLevel_BarLabel_Patch
+	{
+		static bool Prefix(Gizmo_SetFuelLevel __instance, ref string __result)
+		{
+			if (!FuelScaling.TryGetFlamethrower(Gizmo_SetFuelLevel_Target_Getter_Patch.RefuelableFor(__instance), out var flamethrower))
+				return true;
+
+			__result = flamethrower.refuelable.Fuel.ToStringDecimalIfSmall() + " / " + flamethrower.FuelCapacity.ToStringDecimalIfSmall();
+			return false;
 		}
 	}
 

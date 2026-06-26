@@ -24,9 +24,11 @@ namespace ZeFlammenwerfer
 		public CompRefuelable refuelable;
 		public ZeFlameComp flameComp;
 
-		public float FuelPerShot => refuelable?.Props?.fuelConsumptionRate ?? 0f;
+		public ZeFlameCompProps FlameProps => (ZeFlameCompProps)(flameComp?.props ?? GetComp<ZeFlameComp>()?.props);
+		public float FuelCapacity => FuelScaling.CapacityFor(this);
+		public float FuelPerShot => FuelScaling.ConsumptionFor(this);
 		public bool CanFireNow => refuelable == null || FuelPerShot <= 0f || refuelable.Fuel >= FuelPerShot;
-		public string OutOfFuelReason => refuelable?.Props?.outOfFuelMessage ?? "Needs chemfuel";
+		public string OutOfFuelReason => refuelable?.Props?.outOfFuelMessage ?? "Needs fuel";
 		public bool HasManualTarget => manualTarget.IsValid;
 		public LocalTargetInfo ManualTarget => manualTarget;
 		public bool ManualTargetRepathPending => manualTargetRepathPending;
@@ -35,6 +37,11 @@ namespace ZeFlammenwerfer
 		{
 			refuelable = GetComp<CompRefuelable>();
 			flameComp = GetComp<ZeFlameComp>();
+			if (refuelable != null)
+			{
+				FuelScaling.MigrateLegacyTargetFuelLevel(refuelable, this);
+				FuelScaling.ClampFuelToCapacity(refuelable, this);
+			}
 		}
 
 		public override void Tick()

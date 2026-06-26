@@ -16,9 +16,9 @@ namespace ZeFlammenwerfer
 
 		public override bool TryMakePreToilReservations(bool errorOnFailed)
 		{
-			if (pawn.Reserve(Bearer, job, 1, -1, null, errorOnFailed))
-				return pawn.Reserve(job.GetTarget(FuelInd), job, 1, -1, null, errorOnFailed);
-			return false;
+			if (pawn != Bearer && !pawn.Reserve(Bearer, job, 1, -1, null, errorOnFailed))
+				return false;
+			return pawn.Reserve(job.GetTarget(FuelInd), job, 1, -1, null, errorOnFailed);
 		}
 
 		public override IEnumerable<Toil> MakeNewToils()
@@ -39,7 +39,8 @@ namespace ZeFlammenwerfer
 			yield return Toils_Goto.GotoThing(FuelInd, PathEndMode.ClosestTouch).FailOnDespawnedNullOrForbidden(FuelInd).FailOnSomeonePhysicallyInteracting(FuelInd);
 			yield return Toils_Haul.StartCarryThing(FuelInd, putRemainderInQueue: false, subtractNumTakenFromJobCount: true).FailOnDestroyedNullOrForbidden(FuelInd);
 			yield return Toils_Haul.CheckForGetOpportunityDuplicate(reserveFuel, FuelInd, TargetIndex.None, takeFromValidStorage: true);
-			yield return Toils_Goto.GotoThing(BearerInd, PathEndMode.Touch);
+			if (pawn != Bearer)
+				yield return Toils_Goto.GotoThing(BearerInd, PathEndMode.Touch);
 			yield return Toils_General.Wait(240).FailOnDestroyedNullOrForbidden(FuelInd)
 				.FailOnCannotTouch(BearerInd, PathEndMode.Touch)
 				.FailOn(() => Flamethrower == null)

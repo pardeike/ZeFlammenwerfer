@@ -118,7 +118,7 @@ namespace ZeFlammenwerfer
 
 		public static FloatMenuOption MakeEquippedRefuelOption(Pawn actor, Pawn bearer)
 		{
-			string label = $"Prioritize refueling {bearer.LabelShort}'s Ze Flammenwerfer";
+			string label = actor == bearer ? "Refuel Ze Flammenwerfer" : $"Prioritize refueling {bearer.LabelShort}'s Ze Flammenwerfer";
 			if (!TryCanRefuelEquipped(actor, bearer, true, out string failReason))
 				return new FloatMenuOption($"{label}: {failReason}", null);
 			return FloatMenuUtility.DecoratePrioritizedTask(new FloatMenuOption(label, delegate
@@ -129,10 +129,31 @@ namespace ZeFlammenwerfer
 			}, MenuOptionPriority.Default), actor, bearer);
 		}
 
+		public static FloatMenuOption MakeSelfRefuelFromFuelOption(Pawn actor, Thing fuel)
+		{
+			const string label = "Refuel Ze Flammenwerfer";
+			if (!TryCanRefuelEquipped(actor, actor, true, out string failReason))
+				return new FloatMenuOption($"{label}: {failReason}", null);
+			if (!IsValidFuelForEquipped(actor, fuel, out failReason))
+				return new FloatMenuOption($"{label}: {failReason}", null);
+			return FloatMenuUtility.DecoratePrioritizedTask(new FloatMenuOption(label, delegate
+			{
+				var job = MakeRefuelEquippedJob(actor, actor, true, fuel);
+				if (job != null)
+					actor.jobs.TryTakeOrderedJob(job);
+			}, MenuOptionPriority.Default), actor, fuel);
+		}
+
 		public static Job MakeRefuelEquippedJob(Pawn actor, Pawn bearer, bool forced)
 		{
 			var flamethrower = EquippedFlamethrower(bearer);
 			var fuel = flamethrower == null ? null : FindBestFuel(actor, flamethrower);
+			return MakeRefuelEquippedJob(actor, bearer, forced, fuel);
+		}
+
+		static Job MakeRefuelEquippedJob(Pawn actor, Pawn bearer, bool forced, Thing fuel)
+		{
+			var flamethrower = EquippedFlamethrower(bearer);
 			if (flamethrower == null || fuel == null)
 				return null;
 			var job = JobMaker.MakeJob(DefDatabase<JobDef>.GetNamed("ZeFlammenwerfer_RefuelEquipped"), bearer, fuel);
@@ -140,10 +161,38 @@ namespace ZeFlammenwerfer
 			return job;
 		}
 
+		static bool IsValidFuelForEquipped(Pawn actor, Thing fuel, out string failReason)
+		{
+			failReason = null;
+			var flamethrower = EquippedFlamethrower(actor);
+			var compRefuelable = flamethrower?.refuelable ?? flamethrower?.TryGetComp<CompRefuelable>();
+			if (compRefuelable == null)
+			{
+				failReason = "No flamethrower equipped";
+				return false;
+			}
+			if (fuel == null || compRefuelable.Props.fuelFilter.Allows(fuel) == false)
+			{
+				failReason = $"Not valid fuel: {compRefuelable.Props.fuelFilter.Summary}";
+				return false;
+			}
+			if (!actor.CanReserve(fuel, 1, -1, null, true))
+			{
+				failReason = "Cannot reserve fuel";
+				return false;
+			}
+			if (!actor.CanReach(fuel, PathEndMode.ClosestTouch, Danger.Some))
+			{
+				failReason = "No path to fuel";
+				return false;
+			}
+			return true;
+		}
+
 		public static bool TryCanRefuelEquipped(Pawn actor, Pawn bearer, bool forced, out string failReason)
 		{
 			failReason = null;
-			if (actor == null || bearer == null || actor == bearer)
+			if (actor == null || bearer == null)
 			{
 				failReason = "Invalid target";
 				return false;
@@ -175,12 +224,12 @@ namespace ZeFlammenwerfer
 				failReason = "Not ready for refuel";
 				return false;
 			}
-			if (!actor.CanReserve(bearer, 1, -1, null, forced))
+			if (actor != bearer && !actor.CanReserve(bearer, 1, -1, null, forced))
 			{
 				failReason = "Cannot reserve target";
 				return false;
 			}
-			if (!actor.CanReach(bearer, PathEndMode.Touch, Danger.Some))
+			if (actor != bearer && !actor.CanReach(bearer, PathEndMode.Touch, Danger.Some))
 			{
 				failReason = "No path to target";
 				return false;

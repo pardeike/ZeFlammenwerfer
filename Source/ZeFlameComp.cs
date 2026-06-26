@@ -373,6 +373,11 @@ namespace ZeFlammenwerfer
 
 	public class ZeFlameCompProps : CompProperties
 	{
+		public float minimumFuelCapacity = 50f;
+		public float maximumFuelCapacity = 1000f;
+		public float minimumFuelConsumption = 1f;
+		public float maximumFuelConsumption = 20f;
+
 		public ZeFlameCompProps()
 		{
 			compClass = typeof(ZeFlameComp);

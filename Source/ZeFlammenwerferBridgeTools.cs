@@ -315,8 +315,11 @@ namespace ZeFlammenwerfer
 				};
 			}
 
-			var capacity = refuelable.Props?.fuelCapacity ?? 0f;
+			var capacity = flamethrower?.FuelCapacity ?? refuelable.Props?.fuelCapacity ?? 0f;
 			var fuelPerShot = flamethrower?.FuelPerShot ?? 0f;
+			var quality = flamethrower?.TryGetComp<CompQuality>()?.Quality;
+			var shootingSkill = flamethrower?.pawn?.skills?.GetSkill(SkillDefOf.Shooting)?.Level;
+			var flameProps = flamethrower?.FlameProps;
 			return new
 			{
 				hasRefuelable = true,
@@ -334,10 +337,20 @@ namespace ZeFlammenwerfer
 				shotsRemaining = fuelPerShot <= 0f ? int.MaxValue : Mathf.FloorToInt(refuelable.Fuel / fuelPerShot),
 				canFireNow = flamethrower?.CanFireNow ?? false,
 				outOfFuelReason = flamethrower?.OutOfFuelReason,
+				quality = quality?.ToString(),
+				shootingSkill,
+				scaling = flameProps == null ? null : new
+				{
+					minimumFuelCapacity = flameProps.minimumFuelCapacity,
+					maximumFuelCapacity = flameProps.maximumFuelCapacity,
+					minimumFuelConsumption = flameProps.minimumFuelConsumption,
+					maximumFuelConsumption = flameProps.maximumFuelConsumption
+				},
 				props = new
 				{
 					fuelLabel = refuelable.Props?.fuelLabel,
 					fuelConsumptionRate = refuelable.Props?.fuelConsumptionRate ?? 0f,
+					fuelMultiplier = refuelable.Props?.FuelMultiplierCurrentDifficulty ?? 1f,
 					fuelFilter = refuelable.Props?.fuelFilter?.Summary,
 					allowRefuelIfNotEmpty = refuelable.Props?.allowRefuelIfNotEmpty ?? false,
 					atomicFueling = refuelable.Props?.atomicFueling ?? false
@@ -449,7 +462,7 @@ namespace ZeFlammenwerfer
 				moving = pawn.pather?.Moving ?? false,
 				moveDestination = pawn?.pather?.Destination.IsValid == true ? DescribeCell(pawn.pather.Destination.Cell) : null,
 				fuel = flamethrower.refuelable?.Fuel ?? 0f,
-				fuelCapacity = flamethrower.refuelable?.Props?.fuelCapacity ?? 0f,
+				fuelCapacity = flamethrower.FuelCapacity,
 				canFireNow = flamethrower.CanFireNow,
 				flameActive = flamethrower.flameComp?.isActive ?? false,
 				hasManualTarget = flamethrower.HasManualTarget,
@@ -1154,13 +1167,9 @@ namespace ZeFlammenwerfer
 			}
 
 			var before = DescribeFuelState(flamethrower);
-			var capacity = refuelable.Props?.fuelCapacity ?? 0f;
+			var capacity = flamethrower.FuelCapacity;
 			var targetFuel = Mathf.Clamp(fuel, 0f, capacity);
-			var delta = targetFuel - refuelable.Fuel;
-			if (delta > 0.001f)
-				refuelable.Refuel(delta);
-			else if (delta < -0.001f)
-				refuelable.ConsumeFuel(-delta);
+			FuelScaling.SetFuelLevel(refuelable, flamethrower, targetFuel);
 
 			if (setAllowAutoRefuel)
 				refuelable.allowAutoRefuel = allowAutoRefuel;

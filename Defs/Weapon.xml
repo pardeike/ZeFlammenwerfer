@@ -36,19 +36,25 @@
 			<ComponentIndustrial>6</ComponentIndustrial>
 		</costList>
 		<comps>
-			<li Class="ZeFlammenwerfer.ZeFlameCompProps" />
+			<li Class="ZeFlammenwerfer.ZeFlameCompProps">
+				<minimumFuelCapacity>50</minimumFuelCapacity>
+				<maximumFuelCapacity>1000</maximumFuelCapacity>
+				<minimumFuelConsumption>1</minimumFuelConsumption>
+				<maximumFuelConsumption>20</maximumFuelConsumption>
+			</li>
 			<li Class="CompProperties_Refuelable">
-				<fuelLabel>Chemfuel</fuelLabel>
-				<fuelGizmoLabel>Chemfuel</fuelGizmoLabel>
-				<outOfFuelMessage>Needs chemfuel</outOfFuelMessage>
+				<fuelLabel>Fuel</fuelLabel>
+				<fuelGizmoLabel>Fuel</fuelGizmoLabel>
+				<outOfFuelMessage>Needs fuel</outOfFuelMessage>
 				<fuelFilter>
 					<thingDefs>
 						<li>Chemfuel</li>
 					</thingDefs>
 				</fuelFilter>
 				<fuelCapacity>100.0</fuelCapacity>
-				<initialConfigurableTargetFuelLevel>50</initialConfigurableTargetFuelLevel>
+				<initialConfigurableTargetFuelLevel>1000</initialConfigurableTargetFuelLevel>
 				<fuelConsumptionRate>5</fuelConsumptionRate>
+				<fuelMultiplier>10</fuelMultiplier>
 				<consumeFuelOnlyWhenUsed>true</consumeFuelOnlyWhenUsed>
 				<showFuelGizmo>true</showFuelGizmo>
 				<minimumFueledThreshold>1</minimumFueledThreshold>
