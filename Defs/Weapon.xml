@@ -5,7 +5,7 @@
 		<defName>ZeFlammenwerfer</defName>
 		<thingClass>ZeFlammenwerfer.ZeFlammenwerfer</thingClass>
 		<label>Ze Flammenwerfer</label>
-		<description>Dis is ze flammenwerfer</description>
+		<description>Ze Flammenwerfer is a dangerous killing machine for colonists who prefer their problems on fire. Better-quality weapons hold more fuel, skilled shooters waste less per burst, and refueling uses Chemfuel; the carrier can do it themselves, or another colonist can help.</description>
 		<graphicData>
 			<texPath>ZeFlammenwerfer</texPath>
 			<graphicClass>Graphic_Single</graphicClass>
@@ -41,6 +41,8 @@
 				<maximumFuelCapacity>1000</maximumFuelCapacity>
 				<minimumFuelConsumption>1</minimumFuelConsumption>
 				<maximumFuelConsumption>20</maximumFuelConsumption>
+				<minimumRefuelDurationTicks>60</minimumRefuelDurationTicks>
+				<maximumRefuelDurationTicks>240</maximumRefuelDurationTicks>
 			</li>
 			<li Class="CompProperties_Refuelable">
 				<fuelLabel>Fuel</fuelLabel>

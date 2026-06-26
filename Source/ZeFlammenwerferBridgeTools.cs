@@ -700,6 +700,183 @@ namespace ZeFlammenwerfer
 			return false;
 		}
 
+		static Thing SpawnThing(ThingDef def, IntVec3 cell, int stackCount)
+		{
+			var thing = ThingMaker.MakeThing(def);
+			thing.stackCount = Mathf.Clamp(stackCount, 1, thing.def.stackLimit);
+			return GenSpawn.Spawn(thing, cell, CurrentMap);
+		}
+
+		static ZeFlammenwerfer SpawnGroundFlamethrower(IntVec3 cell, float fuel)
+		{
+			var thing = ThingMaker.MakeThing(Defs.ZeFlammenwerfer) as ZeFlammenwerfer;
+			var flamethrower = GenSpawn.Spawn(thing, cell, CurrentMap) as ZeFlammenwerfer;
+			if (flamethrower == null)
+				return null;
+
+			var refuelable = flamethrower.refuelable ?? flamethrower.TryGetComp<CompRefuelable>();
+			if (refuelable != null)
+			{
+				refuelable.allowAutoRefuel = true;
+				FuelScaling.SetFuelLevel(refuelable, flamethrower, fuel);
+				refuelable.TargetFuelLevel = FuelScaling.CapacityFor(flamethrower);
+			}
+			return flamethrower;
+		}
+
+		static void PreparePawnForRefuelJob(Pawn pawn)
+		{
+			if (pawn?.drafter != null)
+				pawn.drafter.Drafted = false;
+			pawn?.pather?.StopDead();
+			pawn?.jobs?.EndCurrentJob(JobCondition.InterruptForced);
+		}
+
+		static object DescribePawnJob(Pawn pawn)
+		{
+			if (pawn == null)
+				return null;
+
+			return new
+			{
+				pawn = DescribeThingBasic(pawn),
+				drafted = pawn.Drafted,
+				currentJob = pawn.CurJobDef?.defName,
+				currentJobReport = pawn.CurJob?.GetReport(pawn),
+				position = DescribeCell(pawn.Position),
+				moving = pawn.pather?.Moving ?? false,
+				destination = pawn.pather?.Destination.IsValid == true ? DescribeCell(pawn.pather.Destination.Cell) : null
+			};
+		}
+
+		static object DescribeRefuelableThing(Thing thing)
+		{
+			var flamethrower = thing as ZeFlammenwerfer;
+			var refuelable = flamethrower?.refuelable ?? thing?.TryGetComp<CompRefuelable>();
+			return new
+			{
+				thing = DescribeThingBasic(thing),
+				fuel = flamethrower == null ? null : DescribeFuelState(flamethrower),
+				refuelable = refuelable == null ? null : new
+				{
+					refuelable.Fuel,
+					refuelable.TargetFuelLevel,
+					refuelable.IsFull,
+					refuelable.allowAutoRefuel
+				}
+			};
+		}
+
+		static async Task<object> StartRefuelJobAndCapture(
+			IRimBridgeContext ctx,
+			CancellationToken cancellationToken,
+			string label,
+			Pawn actor,
+			Job job,
+			int stepTicks,
+			int x,
+			int z,
+			int width,
+			int height,
+			int paddingCells,
+			float rootSize,
+			string fileName,
+			object setup)
+		{
+			if (actor == null || job == null)
+			{
+				return new
+				{
+					success = false,
+					label,
+					error = "Refuel job setup did not produce an actor and job.",
+					setup
+				};
+			}
+
+			ClearUiStateForEvidence();
+			if (actor.jobs.TryTakeOrderedJob(job) == false)
+			{
+				return new
+				{
+					success = false,
+					label,
+					error = $"Failed to start {job.def?.defName} for {actor.LabelShortCap}.",
+					setup,
+					actor = DescribePawnJob(actor)
+				};
+			}
+
+			object tick;
+			try
+			{
+				await ctx.Game.RunForTicksAsync(stepTicks, new RimBridgeRunTicksOptions
+				{
+					TimeoutMs = Math.Max(10000, stepTicks * 250),
+					ForceNormalSpeed = true,
+					PauseWhenDone = true,
+					FailIfBusy = true
+				}, cancellationToken);
+				tick = new
+				{
+					success = true,
+					mode = "run",
+					requestedTicks = stepTicks
+				};
+			}
+			catch (Exception ex)
+			{
+				return new
+				{
+					success = false,
+					label,
+					error = $"Real-time tick run for {label} failed: {ex.Message}",
+					setup,
+					job = job.def?.defName,
+					actor = DescribePawnJob(actor),
+					exception = ex.GetType().FullName
+				};
+			}
+
+			var screenshot = await ctx.Tools.CallAsync("rimworld/screenshot_cell_rect", new
+			{
+				x,
+				z,
+				width,
+				height,
+				paddingCells,
+				rootSize,
+				fileName,
+				suppressMessage = true
+			}, cancellationToken: cancellationToken);
+			if (screenshot.Succeeded() == false)
+			{
+				return new
+				{
+					success = false,
+					label,
+					error = $"Screenshot capture for {label} failed.",
+					setup,
+					job = job.def?.defName,
+					actor = DescribePawnJob(actor),
+					tick,
+					screenshot
+				};
+			}
+
+			return new
+			{
+				success = true,
+				label,
+				setup,
+				job = job.def?.defName,
+				actor = DescribePawnJob(actor),
+				tick,
+				requestedRect = new { x, z, width, height, paddingCells, rootSize },
+				screenshot = screenshot.Result
+			};
+		}
+
 		static LocalTargetInfo ApplyRenderPose(Pawn pawn, ZeFlammenwerfer flamethrower, Rot4 rotation, IntVec3 targetCell, bool draft, bool setManualTarget, bool activateVisual, bool stopMovement, bool clearUiState)
 		{
 			if (draft && pawn.drafter != null)
@@ -1149,6 +1326,240 @@ namespace ZeFlammenwerfer
 				},
 				cleanup,
 				reset,
+				captures = captures.ToArray()
+			};
+		}
+
+		[Tool("zeflammenwerfer/capture_refuel_progress_variants", Description = "Capture screenshots of the three Ze Flammenwerfer refuel progress-bar variants: dropped weapon, self-refuel, and another pawn refueling the bearer.")]
+		public static async Task<object> CaptureRefuelProgressVariants(
+			IRimBridgeContext ctx,
+			CancellationToken cancellationToken,
+			[ToolParameter(Description = "When true, reload the save before each variant so the screenshots are independent.", Required = false, DefaultValue = true)] bool loadGame = true,
+			[ToolParameter(Description = "Save fixture to load for each variant.", Required = false, DefaultValue = "zeflammenwerfer walkthrough")] string saveName = "zeflammenwerfer walkthrough",
+			[ToolParameter(Description = "Stable pawn id for the flamethrower bearer, normally Rocha in the walkthrough save.", Required = false, DefaultValue = "Thing_Human776")] string bearerPawnId = "Thing_Human776",
+			[ToolParameter(Description = "Stable pawn id for the pawn refueling the bearer, normally Savanna in the walkthrough save.", Required = false, DefaultValue = "Thing_Human779")] string helperPawnId = "Thing_Human779",
+			[ToolParameter(Description = "Stable pawn id for the ground-weapon refuel actor, normally Schneider in the walkthrough save.", Required = false, DefaultValue = "Thing_Human773")] string groundActorPawnId = "Thing_Human773",
+			[ToolParameter(Description = "Screenshot padding in cells.", Required = false, DefaultValue = 2)] int paddingCells = 2,
+			[ToolParameter(Description = "Camera root size used by the cell-rect screenshots.", Required = false, DefaultValue = 7f)] float rootSize = 7f,
+			[ToolParameter(Description = "Prefix for generated screenshot file names.", Required = false, DefaultValue = "zef-refuel-progress")] string filePrefix = "zef-refuel-progress",
+			[ToolParameter(Description = "Optional caller-supplied run id included in the result and file names.", Required = false, DefaultValue = "manual")] string runId = "manual")
+		{
+			if (ctx == null)
+			{
+				return new
+				{
+					success = false,
+					error = "RimBridge SDK context was not injected."
+				};
+			}
+
+			paddingCells = Mathf.Clamp(paddingCells, 0, 8);
+			rootSize = Mathf.Clamp(rootSize, 2f, 20f);
+			var captures = new List<object>();
+			var loads = new List<object>();
+
+			async Task<object> LoadForVariant(string label)
+			{
+				if (loadGame == false)
+					return null;
+
+				var loadResult = await ctx.Tools.CallAsync("rimworld/load_game_ready", new
+				{
+					saveName,
+					readiness = "visual",
+					pauseIfNeeded = true,
+					timeoutMs = 120000
+				}, cancellationToken: cancellationToken);
+				var load = new
+				{
+					label,
+					success = loadResult.Succeeded(),
+					result = loadResult.Result,
+					error = loadResult.Error
+				};
+				loads.Add(load);
+				return loadResult.Succeeded() ? null : load;
+			}
+
+			var loadError = await LoadForVariant("01-ground-dropped-weapon");
+			if (loadError != null)
+			{
+				return new
+				{
+					success = false,
+					error = "Loading the save for ground refuel failed.",
+					loads = loads.ToArray(),
+					captures = captures.ToArray()
+				};
+			}
+			if (TryGetCell(113, 119, out var groundWeaponCell, out var error) == false)
+				return error;
+			if (TryGetCell(113, 118, out var groundFuelCell, out error) == false)
+				return error;
+			var groundActor = FindPawn(groundActorPawnId);
+			PreparePawnForRefuelJob(groundActor);
+			var groundWeapon = SpawnGroundFlamethrower(groundWeaponCell, 0f);
+			var groundFuel = SpawnThing(ThingDef.Named("Chemfuel"), groundFuelCell, 10);
+			var groundJob = FlamethrowerRefuelUtility.MakeGroundRefuelJob(groundActor, groundWeapon, true);
+			var groundCapture = await StartRefuelJobAndCapture(
+				ctx,
+				cancellationToken,
+				"01-ground-dropped-weapon",
+				groundActor,
+				groundJob,
+				stepTicks: 70,
+				x: 112,
+				z: 117,
+				width: 4,
+				height: 4,
+				paddingCells,
+				rootSize,
+				fileName: $"{filePrefix}-{runId}-01-ground-dropped-weapon",
+				setup: new
+				{
+					actor = DescribePawnJob(groundActor),
+					groundWeapon = DescribeRefuelableThing(groundWeapon),
+					fuel = DescribeThingBasic(groundFuel)
+				});
+			captures.Add(groundCapture);
+			if (PayloadSucceeded(groundCapture) == false)
+			{
+				return new
+				{
+					success = false,
+					error = "Ground dropped-weapon refuel capture failed.",
+					loads = loads.ToArray(),
+					captures = captures.ToArray()
+				};
+			}
+
+			loadError = await LoadForVariant("02-carrier-self-refuel");
+			if (loadError != null)
+			{
+				return new
+				{
+					success = false,
+					error = "Loading the save for self-refuel failed.",
+					loads = loads.ToArray(),
+					captures = captures.ToArray()
+				};
+			}
+			if (TryGetPawnAndWeapon(bearerPawnId, out var bearer, out var bearerWeapon, out error) == false)
+				return error;
+			if (TryGetCell(116, 114, out var selfFuelCell, out error) == false)
+				return error;
+			PreparePawnForRefuelJob(bearer);
+			var selfRefuelable = bearerWeapon.refuelable ?? bearerWeapon.TryGetComp<CompRefuelable>();
+			if (selfRefuelable != null)
+			{
+				selfRefuelable.allowAutoRefuel = true;
+				FuelScaling.SetFuelLevel(selfRefuelable, bearerWeapon, 0f);
+				selfRefuelable.TargetFuelLevel = FuelScaling.CapacityFor(bearerWeapon);
+			}
+			var selfFuel = SpawnThing(ThingDef.Named("Chemfuel"), selfFuelCell, 10);
+			var selfJob = FlamethrowerRefuelUtility.MakeRefuelEquippedJob(bearer, bearer, true);
+			var selfCapture = await StartRefuelJobAndCapture(
+				ctx,
+				cancellationToken,
+				"02-carrier-self-refuel",
+				bearer,
+				selfJob,
+				stepTicks: 70,
+				x: 115,
+				z: 113,
+				width: 4,
+				height: 4,
+				paddingCells,
+				rootSize,
+				fileName: $"{filePrefix}-{runId}-02-carrier-self-refuel",
+				setup: new
+				{
+					bearer = DescribePawnJob(bearer),
+					weapon = DescribeRefuelableThing(bearerWeapon),
+					fuel = DescribeThingBasic(selfFuel)
+				});
+			captures.Add(selfCapture);
+			if (PayloadSucceeded(selfCapture) == false)
+			{
+				return new
+				{
+					success = false,
+					error = "Carrier self-refuel capture failed.",
+					loads = loads.ToArray(),
+					captures = captures.ToArray()
+				};
+			}
+
+			loadError = await LoadForVariant("03-other-pawn-refuels-carrier");
+			if (loadError != null)
+			{
+				return new
+				{
+					success = false,
+					error = "Loading the save for helper refuel failed.",
+					loads = loads.ToArray(),
+					captures = captures.ToArray()
+				};
+			}
+			if (TryGetPawnAndWeapon(bearerPawnId, out bearer, out bearerWeapon, out error) == false)
+				return error;
+			var helper = FindPawn(helperPawnId);
+			if (TryGetCell(116, 119, out var helperFuelCell, out error) == false)
+				return error;
+			PreparePawnForRefuelJob(helper);
+			PreparePawnForRefuelJob(bearer);
+			var helperRefuelable = bearerWeapon.refuelable ?? bearerWeapon.TryGetComp<CompRefuelable>();
+			if (helperRefuelable != null)
+			{
+				helperRefuelable.allowAutoRefuel = true;
+				FuelScaling.SetFuelLevel(helperRefuelable, bearerWeapon, 0f);
+				helperRefuelable.TargetFuelLevel = FuelScaling.CapacityFor(bearerWeapon);
+			}
+			var helperFuel = SpawnThing(ThingDef.Named("Chemfuel"), helperFuelCell, 10);
+			var helperJob = FlamethrowerRefuelUtility.MakeRefuelEquippedJob(helper, bearer, true);
+			var helperCapture = await StartRefuelJobAndCapture(
+				ctx,
+				cancellationToken,
+				"03-other-pawn-refuels-carrier",
+				helper,
+				helperJob,
+				stepTicks: 145,
+				x: 114,
+				z: 113,
+				width: 5,
+				height: 8,
+				paddingCells,
+				rootSize,
+				fileName: $"{filePrefix}-{runId}-03-other-pawn-refuels-carrier",
+				setup: new
+				{
+					helper = DescribePawnJob(helper),
+					bearer = DescribePawnJob(bearer),
+					weapon = DescribeRefuelableThing(bearerWeapon),
+					fuel = DescribeThingBasic(helperFuel)
+				});
+			captures.Add(helperCapture);
+			if (PayloadSucceeded(helperCapture) == false)
+			{
+				return new
+				{
+					success = false,
+					error = "Other-pawn refuel capture failed.",
+					loads = loads.ToArray(),
+					captures = captures.ToArray()
+				};
+			}
+
+			await ctx.Tools.CallAsync("rimworld/clear_selection", cancellationToken: cancellationToken);
+
+			return new
+			{
+				success = true,
+				suite = "refuel-progress-variants",
+				runId,
+				saveName,
+				loadGame,
+				loads = loads.ToArray(),
 				captures = captures.ToArray()
 			};
 		}

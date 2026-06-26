@@ -649,6 +649,19 @@ namespace ZeFlammenwerfer
 		}
 	}
 
+	[HarmonyPatch(typeof(CompProperties_Refuelable), nameof(CompProperties_Refuelable.SpecialDisplayStats))]
+	public static class CompProperties_Refuelable_SpecialDisplayStats_Patch
+	{
+		static bool Prefix(StatRequest req, ref IEnumerable<StatDrawEntry> __result)
+		{
+			if (req.Def != Defs.ZeFlammenwerfer)
+				return true;
+
+			__result = Enumerable.Empty<StatDrawEntry>();
+			return false;
+		}
+	}
+
 	[HarmonyPatch(typeof(Gizmo_SetFuelLevel), "get_Target")]
 	public static class Gizmo_SetFuelLevel_Target_Getter_Patch
 	{

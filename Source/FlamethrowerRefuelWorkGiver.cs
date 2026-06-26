@@ -13,6 +13,8 @@ namespace ZeFlammenwerfer
 		static readonly ThingRequest weaponRequest = ThingRequest.ForDef(ThingDef.Named("ZeFlammenwerfer"));
 
 		public override ThingRequest PotentialWorkThingRequest => weaponRequest;
+		public override JobDef JobStandard => Defs.ZeFlammenwerfer_RefuelGround;
+		public override JobDef JobAtomic => Defs.ZeFlammenwerfer_RefuelGroundAtomic;
 
 		public override bool CanRefuelThing(Thing t)
 		{
@@ -110,7 +112,7 @@ namespace ZeFlammenwerfer
 		{
 			if (actor == null || flamethrower == null)
 				return null;
-			var job = RefuelWorkGiverUtility.RefuelJob(actor, flamethrower, forced, JobDefOf.Refuel, JobDefOf.RefuelAtomic);
+			var job = RefuelWorkGiverUtility.RefuelJob(actor, flamethrower, forced, Defs.ZeFlammenwerfer_RefuelGround, Defs.ZeFlammenwerfer_RefuelGroundAtomic);
 			if (job != null)
 				job.playerForced = forced;
 			return job;
@@ -156,7 +158,7 @@ namespace ZeFlammenwerfer
 			var flamethrower = EquippedFlamethrower(bearer);
 			if (flamethrower == null || fuel == null)
 				return null;
-			var job = JobMaker.MakeJob(DefDatabase<JobDef>.GetNamed("ZeFlammenwerfer_RefuelEquipped"), bearer, fuel);
+			var job = JobMaker.MakeJob(Defs.ZeFlammenwerfer_RefuelEquipped, bearer, fuel);
 			job.playerForced = forced;
 			return job;
 		}

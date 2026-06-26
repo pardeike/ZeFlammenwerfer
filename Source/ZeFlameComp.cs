@@ -377,6 +377,8 @@ namespace ZeFlammenwerfer
 		public float maximumFuelCapacity = 1000f;
 		public float minimumFuelConsumption = 1f;
 		public float maximumFuelConsumption = 20f;
+		public int minimumRefuelDurationTicks = 60;
+		public int maximumRefuelDurationTicks = 240;
 
 		public ZeFlameCompProps()
 		{

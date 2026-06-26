@@ -113,5 +113,8 @@ namespace ZeFlammenwerfer
 	public static class Defs
 	{
 		public static ThingDef ZeFlammenwerfer;
+		public static JobDef ZeFlammenwerfer_RefuelGround;
+		public static JobDef ZeFlammenwerfer_RefuelGroundAtomic;
+		public static JobDef ZeFlammenwerfer_RefuelEquipped;
 	}
 }
