@@ -81,9 +81,10 @@ namespace ZeFlammenwerfer
 				var cell = new IntVec3((int)p.x, 0, (int)p.z);
 				if (cell.InBounds(map))
 				{
-					var things = thingGrid.ThingsAt(cell).Where(thing => thing as Pawn == null);
-					things.OfType<ThingWithComps>().Do(thing => Tools.ApplyFlameDamage(thing, amount));
-					Tools.ApplyCellFlame(map, amount, cell, things);
+					var things = thingGrid.ThingsListAtFast(cell).Where(thing => thing is not Pawn).ToArray();
+					things.OfType<ThingWithComps>().Where(thing => thing is not Fire).Do(thing => Tools.ApplyFlameDamage(thing, amount));
+					var updatedThings = thingGrid.ThingsListAtFast(cell).Where(thing => thing is not Pawn).ToArray();
+					Tools.ApplyCellFlame(map, amount, cell, updatedThings);
 				}
 			}
 		}

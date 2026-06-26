@@ -81,13 +81,29 @@ namespace ZeFlammenwerfer
 					thing.comps.Add(fireDamageComp);
 			}
 
-			AttachFire(thing, amount);
 			fireDamageComp.Increase();
 
-			thing.TryGetComp<CompAttachBase>()?.attachments?.OfType<Fire>().FirstOrDefault()?.DoComplexCalcs();
+			if (thing is Pawn)
+			{
+				AttachFire(thing, amount);
+				thing.TryGetComp<CompAttachBase>()?.attachments?.OfType<Fire>().FirstOrDefault()?.DoComplexCalcs();
+			}
+			else
+			{
+				ApplyThingCellFlame(thing, amount);
+			}
 		}
 
-		public static void ApplyCellFlame(Map map, float amount, IntVec3 cell, IEnumerable<Thing> things)
+		static void ApplyThingCellFlame(Thing thing, float amount)
+		{
+			if (thing.Spawned == false || thing.Map == null)
+				return;
+
+			var fire = ApplyCellFlame(thing.Map, amount, thing.Position, thing.Map.thingGrid.ThingsListAtFast(thing.Position));
+			fire?.DoComplexCalcs();
+		}
+
+		public static Fire ApplyCellFlame(Map map, float amount, IntVec3 cell, IEnumerable<Thing> things)
 		{
 			var cellFire = things.OfType<Fire>().FirstOrDefault();
 			if (cellFire == null)
@@ -101,6 +117,7 @@ namespace ZeFlammenwerfer
 				if (cellFire.fireSize < amount)
 					cellFire.fireSize = amount;
 			}
+			return cellFire;
 		}
 
 		public static IBGCurvePointI[] AddPoints(this BGCurve curve)

@@ -362,7 +362,7 @@ namespace ZeFlammenwerfer
 		const float factorPawn = 0.001f;
 		const float factorThing = 0.1f;
 
-		public static void Multiply(ref int damage, Thing thing)
+		public static float Multiply(float damage, Thing thing)
 		{
 			if (thing is ThingWithComps thingWithComps)
 			{
@@ -370,53 +370,71 @@ namespace ZeFlammenwerfer
 				if (fireDamageComp != null)
 				{
 					var factor = (thing as Pawn) != null ? factorPawn : factorThing;
-					damage = (int)(damage * factor * fireDamageComp.multiplier);
+					return damage * factor * fireDamageComp.multiplier;
 				}
 			}
+			return damage;
 		}
 
 		public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
 		{
-			return new CodeMatcher(instructions)
-				.MatchStartForward(
-					new CodeMatch(OpCodes.Ldarg_1),
-					new CodeMatch(OpCodes.Isinst, typeof(Pawn))
-				)
-				.Insert(
-					new CodeInstruction(OpCodes.Ldloca_S, 0),
-					new CodeInstruction(OpCodes.Ldarg_1),
-					CodeInstruction.Call((int dummy) => Multiply(ref dummy, default))
-				)
-				.InstructionEnumeration();
+			var previousWasDamageLoad = false;
+			foreach (var instruction in instructions)
+			{
+				yield return instruction;
+
+				if (previousWasDamageLoad && instruction.opcode == OpCodes.Conv_R4)
+				{
+					yield return new CodeInstruction(OpCodes.Ldarg_1);
+					yield return CodeInstruction.Call(() => Multiply(default, default));
+				}
+
+				previousWasDamageLoad = LoadsDamageLocal(instruction);
+			}
+		}
+
+		static bool LoadsDamageLocal(CodeInstruction instruction)
+		{
+			if (instruction.opcode == OpCodes.Ldloc_0)
+				return true;
+			if (instruction.opcode != OpCodes.Ldloc && instruction.opcode != OpCodes.Ldloc_S)
+				return false;
+			return instruction.operand switch
+			{
+				LocalBuilder local => local.LocalIndex == 0,
+				int localIndex => localIndex == 0,
+				byte localIndex => localIndex == 0,
+				_ => false
+			};
 		}
 	}
 
 	// attach flamethrower logic to custom projectile
 	//
-		[HarmonyPatch(typeof(Projectile), nameof(Projectile.Launch))]
-		[HarmonyPatch(new[] { typeof(Thing), typeof(Vector3), typeof(LocalTargetInfo), typeof(LocalTargetInfo), typeof(ProjectileHitFlags), typeof(bool), typeof(Thing), typeof(ThingDef) })]
-		public static class Projectile_Launch_Patch
+	[HarmonyPatch(typeof(Projectile), nameof(Projectile.Launch))]
+	[HarmonyPatch(new[] { typeof(Thing), typeof(Vector3), typeof(LocalTargetInfo), typeof(LocalTargetInfo), typeof(ProjectileHitFlags), typeof(bool), typeof(Thing), typeof(ThingDef) })]
+	public static class Projectile_Launch_Patch
+	{
+		static bool Prefix(Projectile __instance, Thing equipment)
 		{
-			static bool Prefix(Projectile __instance, Thing equipment)
-			{
-				if (__instance is not ZeFlame)
-					return true;
-				if (equipment is not ZeFlammenwerfer flamethrower || flamethrower.refuelable == null)
-					return true;
-				if (flamethrower.CanFireNow == false)
-				{
-					flamethrower.ClearManualTargetVisuals();
-					return false;
-				}
-				if (flamethrower.FuelPerShot > 0f)
-					flamethrower.refuelable.ConsumeFuel(flamethrower.FuelPerShot);
+			if (__instance is not ZeFlame)
 				return true;
-			}
-
-			public static void Postfix(Thing launcher, Projectile __instance, Thing equipment)
+			if (equipment is not ZeFlammenwerfer flamethrower || flamethrower.refuelable == null)
+				return true;
+			if (flamethrower.CanFireNow == false)
 			{
-				if (__instance is not ZeFlame flame)
-					return;
+				flamethrower.ClearManualTargetVisuals();
+				return false;
+			}
+			if (flamethrower.FuelPerShot > 0f)
+				flamethrower.refuelable.ConsumeFuel(flamethrower.FuelPerShot);
+			return true;
+		}
+
+		public static void Postfix(Thing launcher, Projectile __instance, Thing equipment)
+		{
+			if (__instance is not ZeFlame flame)
+				return;
 			if (launcher is Pawn pawn)
 			{
 				var flameComp = equipment?.TryGetComp<ZeFlameComp>();
