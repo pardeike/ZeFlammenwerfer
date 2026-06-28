@@ -38,7 +38,7 @@ When publishing a new version, update `ModVersion` in `Directory.Build.props`, r
 - `1.6/Assemblies/ZeFlammenwerfer.dll`
 - `Resources/flamethrower-*`, if asset bundles changed
 
-RimBridge companion tools are deployed locally to the global `BridgeTools` folder for validation. They are not part of the GitHub or Steam release zip.
+RimBridge companion tools are deployed locally to the global `BridgeTools` folder for validation. GitHub and Steam release builds pass `BuildBridgeTools=false`; companion tools are not part of the release zip.
 
 For ordinary source-only development commits, restore generated assemblies before committing unless the commit is intentionally release-related.
 

@@ -18,16 +18,18 @@ For quieter local builds:
 
 ## Outputs
 
-Release builds write:
+Default Release builds write:
 
 - `1.6/Assemblies/ZeFlammenwerfer.dll`
 - `artifacts/BridgeTools/ZeFlammenwerfer/ZeFlammenwerfer.BridgeTools.dll`
+
+Pass `/p:BuildBridgeTools=false` for release packaging paths that should build and stage only the main mod payload.
 
 The project has a `CopyToRimworld` MSBuild target that runs when `RIMWORLD_MOD_DIR` is set. That target:
 
 - deletes `1.6/Assemblies/0Harmony.dll` if a package accidentally places it there.
 - copies the `1.6` folder plus root metadata/assets into `$(RIMWORLD_MOD_DIR)\ZeFlammenwerfer`.
-- deploys the RimBridge companion DLL to the global sibling folder `$(RIMWORLD_MOD_DIR)\..\BridgeTools\ZeFlammenwerfer` unless `RIMWORLD_BRIDGETOOLS_DIR` is set explicitly.
+- deploys the RimBridge companion DLL to the global sibling folder `$(RIMWORLD_MOD_DIR)\..\BridgeTools\ZeFlammenwerfer` unless `BuildBridgeTools=false`.
 - zips that copied mod folder as `$(RIMWORLD_MOD_DIR)\ZeFlammenwerfer.zip`.
 
 On macOS with a Unix shell, MSBuild still prints Windows-style path separators in the target body because the project file uses backslashes.
