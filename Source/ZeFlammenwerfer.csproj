@@ -118,7 +118,7 @@
 		<Delete Files="..\1.6\Assemblies\0Harmony.dll" />
 		<RemoveDir Directories="$(RIMWORLD_MOD_DIR)\$(ModFileName)" />
 		<PropertyGroup>
-			<RIMWORLD_BRIDGETOOLS_DIR Condition="'$(RIMWORLD_BRIDGETOOLS_DIR)' == ''">$(RIMWORLD_MOD_DIR)\..\BridgeTools</RIMWORLD_BRIDGETOOLS_DIR>
+			<GlobalBridgeToolsDir>$(RIMWORLD_MOD_DIR)\..\BridgeTools</GlobalBridgeToolsDir>
 		</PropertyGroup>
 		<ItemGroup>
 			<Copy_16 Include="..\1.6\**" Exclude="..\1.6\BridgeTools\**;..\1.6\**\.DS_Store;..\1.6\**\._*" />
@@ -141,7 +141,7 @@
 		<Copy SourceFiles="@(CopyLicense)" DestinationFolder="$(RIMWORLD_MOD_DIR)\$(ModFileName)" />
 		<Copy SourceFiles="@(CopyLoadFolders)" DestinationFolder="$(RIMWORLD_MOD_DIR)\$(ModFileName)" />
 		<Copy SourceFiles="@(CopyReadme)" DestinationFolder="$(RIMWORLD_MOD_DIR)\$(ModFileName)" />
-		<Copy SourceFiles="@(CopyBridgeTools)" DestinationFolder="$(RIMWORLD_BRIDGETOOLS_DIR)\ZeFlammenwerfer" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="@(CopyBridgeTools)" DestinationFolder="$(GlobalBridgeToolsDir)\ZeFlammenwerfer" SkipUnchangedFiles="true" />
 	</Target>
 
 	<Target Name="ZipMod" AfterTargets="CopyToRimworld" Condition="'$(RIMWORLD_MOD_DIR)' != ''">
